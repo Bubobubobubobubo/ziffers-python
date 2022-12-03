@@ -1,14 +1,18 @@
+
 ebnf = r"""
-    expr = (number ws?)+ 
-    number = factor additive*
-    additive = ("+"/"-") factor
-    factor = primary multiplicative*
-    multiplicative = ("*" / "/") primary
-    primary = parens / neg / number
-    parens   = "(" number ")"
-    neg = "-" primary 
-    number = ((~"[0-9]"+ "."? ~"[0-9]"*) / ("." ~"[0-9]"+)) (("e"/"E") ("-"/"+") ~"[0-9]"+)?
-    ws        = ~"\s*"
+    expr = (bar / octup / octdown / escape / rhythm / float / chord / pc / ws?)+
+
+    escape = (lt (chord / pc) gt)
+
+    chord     = pc{2,}
+    pc        = (neg_pc / pc_basic)
+    neg_pc    = (~r"-" pc)
+    pc_basic  = ~r"[0-9TE]"
+
+    rhythm    = ~r"[mklpdcwyhnqaefsxtgujoz]"
+
+    float     = ~r"\d+\.\d+"
+
     lpar      = "("
     rpar      = ")"
     lbra      = "["
@@ -17,13 +21,19 @@ ebnf = r"""
     rcbra     = "}"
     lt        = "<"
     gt        = ">"
-    comma     = ","
+
+
     octup     = "^"
     octdown   = "_"
-    barsign   = "|"
+
+    bar       = "|"
+
     plus = "+"
     minus = "-"
     times = "*"
     div   = "/"
+
     emptyline = ws+
+    comma     = ","
+    ws        = ~"\s*"
     """

@@ -9,7 +9,8 @@ if __name__ == "__main__":
         expr = input('> ')
         if expr not in EXIT_CONDITION:
             try:
-                parse_expression(expr)
+                result = parse_expression(expr)
+                print(result)
             except Exception as e:
                 print(f"[red]Failed:[/red] {e}")
         else:
