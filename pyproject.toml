@@ -1,0 +1,33 @@
+[project]
+name = "python-ziffers"
+version = "0.1.0"
+description = "Port of the Ziffers numerical notation for Python"
+authors = [
+    {name = "Raphaël Forment", email="raphael.forment@gmail.com"},
+    {email = "raphael.forment@gmail.com"}
+]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+requires-python = ">=3.10"
+
+keywords = ["mininotation", "algorithmic music", "parser"]
+
+classifiers = [
+    "Topic :: Software Development"
+]
+
+dependencies = [
+    "parsimonious>=0.10.0",
+    "rich>=12.6.0"
+]
+
+[project.urls]
+homepage = "https://github.com/Bubobubobubobubo/ziffers-python"
+documentation = "https://github.com/Bubobubobubobubo/ziffers-python"
+repository = "https://github.com/Bubobubobubobubo/ziffers-python"
+
+[tool.black]
+line-length = 88
+target_version = ['py310']
+include = '\.pyi?$'
+exclude = '''
