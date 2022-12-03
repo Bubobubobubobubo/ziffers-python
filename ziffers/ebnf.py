@@ -1,8 +1,9 @@
 
 ebnf = r"""
-    expr = (bar / octup / octdown / escape / rhythm / float / chord / pc / ws?)+
+    ziffers = (bar / octup / octdown / subdiv / escape / rhythm / float / chord / pc / ws?)+
 
     escape = (lt (chord / pc) gt)
+    subdiv = (lbra ziffers rbra)
 
     chord     = pc{2,}
     pc        = (neg_pc / pc_basic)

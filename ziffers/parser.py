@@ -1,5 +1,6 @@
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
+from rich import print
 from .ebnf import ebnf
 
 __all__ = ('ZiffersVisitor', 'parse_expression',)
@@ -7,31 +8,47 @@ __all__ = ('ZiffersVisitor', 'parse_expression',)
 GRAMMAR = Grammar(ebnf)
 
 class ZiffersVisitor(NodeVisitor):
-    def visit_expr(self, node, visited_children):
-        """ Returns the overall output. """
-        output = {}
-        for child in visited_children:
-            output.update(child[0])
-        return output
 
-    def visit_entry(self, node, visited_children):
-        """ Makes a dict of the section (as key) and the key/value pairs. """
-        key, values = visited_children
-        return {key: dict(values)}
+    """
+    Visitor for the Ziffers syntax.
+    """
 
-    def visit_section(self, node, visited_children):
-        """ Gets the section name. """
-        _, section, *_ = visited_children
-        return section.text
+    def visit_ziffers(self, node, children):
+        """
+        Top-level visiter. Will traverse and build something out of a complete and valid
+        Ziffers expression.
+        """
+        print(f"Node: {node}, Children: {children}")
+        result = {'ziffers': []}
 
-    def visit_pair(self, node, visited_children):
-        """ Gets each key/value pair, returns a tuple. """
-        key, _, value, *_ = node.children
-        return key.text, value.text
+        for i in children:
+            if i[0] in (None, [], {}) and isinstance(i[0], dict):
+                continue
+            try:
+                result['ziffers'].append(i[0])
+            except Exception as e:
+                print(f"[red]Error in ziffers:[/red] {e}")
+                pass
+        return result
 
-    def generic_visit(self, node, visited_children):
-        """ The generic visit method. """
-        return visited_children or node
+    def visit_pc(self, node, children):
+        return {node.expr_name: node.text}
+
+    def visit_escape(self, node, children):
+        return {node.expr_name: node.text}
+
+    # def visit_subdiv(self, node, visited_children):
+    #     key, values = visited_children
+    #     ret)rn {key, dict(values)}
+
+    def generic_visit(self, node, children):
+        """
+        This method seem to be the generic method to include in any NodeVisitor.
+        Probably better to keep it as is for the moment. This is appending a whole
+        lot of garbage to the final expression because I don't really know how to
+        write it properly...
+        """
+        return children or node
 
 def parse_expression(expression: str) -> dict:
     tree = GRAMMAR.parse(expression)
