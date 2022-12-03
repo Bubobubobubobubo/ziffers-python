@@ -34,7 +34,6 @@ if __name__ == "__main__":
     }
     for expression in expressions:
         try: 
-            print(f"[green]== Parsing: [yellow]{expression}[/yellow] ==[/green]")
             parse_expression(expression)
         except Exception as e:
-            print(f"[red]Failed parsing {expression}[/red]: {e}")
+            print(f"[red]Failed on {expression}[/red]: {str(e)[0:40]}...")

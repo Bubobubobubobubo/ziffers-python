@@ -1,5 +1,5 @@
 ebnf = r"""
-    expr = (number ws?)* 
+    expr = (number ws?)+ 
     number = factor additive*
     additive = ("+"/"-") factor
     factor = primary multiplicative*
