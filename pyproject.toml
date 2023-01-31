@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Port of the Ziffers numerical notation for Python"
 authors = [
     {name = "Raphaël Forment", email="raphael.forment@gmail.com"},
-    {name = "Miika Alonen" email = "amiika@gmail.com"}
+    {name = "Miika Alonen", email = "amiika@gmail.com"}
 ]
 license = {file = "LICENSE.txt"}
 readme = "README.md"
@@ -18,8 +18,8 @@ classifiers = [
 
 dependencies = [
     "lark>=1.1.5",
-    "rich>=12.6.0"
-    "pytest=>7.2.1"
+    "rich>=12.6.0",
+    "pytest=>7.2.1",
 ]
 
 [project.urls]
@@ -31,4 +31,3 @@ repository = "https://github.com/Bubobubobubobubo/ziffers-python"
 line-length = 88
 target_version = ['py310']
 include = '\.pyi?$'
-exclude = '''
