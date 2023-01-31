@@ -1,7 +1,7 @@
-from lark import Lark, Transformer
-from classes import *
-from common import flatten
-from defaults import default_durs
+from lark import Transformer
+from .classes import *
+from .common import flatten
+from .defaults import default_durs
 from collections import Counter
 
 class ZiffersTransformer(Transformer):

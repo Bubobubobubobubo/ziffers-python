@@ -1,5 +1,5 @@
 from rich import print
-from mapper import *
+from .mapper import *
 from pathlib import Path
 from lark import Lark
 
