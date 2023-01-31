@@ -1,0 +1,23 @@
+    
+    ?value: root      
+    root: (pc | dur_change | oct_change | WS | chord | cycle | randompitch | range | list | subdivision)*
+    list: "(" root ")"
+    randompitch: /[\(][-?0-9][,][-?0-9][\)]/
+    range: /[-?0-9]\.\.[-?0-9]/
+    cycle: "<" root ">"
+    pc: prefix* pitch
+    pitch: /[-?0-9TE]/
+    prefix: octave | duration
+    oct_change: octave WS
+    octave: /[_^]+/
+    chord: pc pc+
+    dur_change: duration WS
+    duration: dur+
+    dur: dchar dot*
+    dchar: /[mklpdcwyhnqaefsxtgujzo]/
+    dot: "."
+    subitems: (pc | WS | chord | cycle | subdivision)*
+    subdivision: "[" subitems "]"
+
+    %import common.SIGNED_NUMBER
+    %import common.WS
