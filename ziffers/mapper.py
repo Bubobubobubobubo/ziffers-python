@@ -2,7 +2,6 @@ from lark import Transformer
 from .classes import *
 from .common import flatten
 from .defaults import default_durs
-from collections import Counter
 
 class ZiffersTransformer(Transformer):
     
@@ -28,11 +27,14 @@ class ZiffersTransformer(Transformer):
 
     def pc(self, s):
         if(len(s)>1):
-            counter = Counter()
-            for d in s:
-                counter.update(d)
-            result = dict(counter)
-            result["text"] = result["text"][::-1]
+            # Collect&sum prefixes from any order: _qee^s4 etc.
+            result = s[0]
+            for hash in s[1:]:
+                for key in hash.keys():
+                    if key in result:
+                        result[key] = result[key] + hash[key]
+                    else:
+                        result[key] = hash[key]            
             return Pitch(**result)
         else:
             val = s[0]
@@ -46,7 +48,15 @@ class ZiffersTransformer(Transformer):
 
     def oct_change(self,s):
         octave = s[0]
-        return [Octave(oct=octave["oct"],text=octave["text"]),s[1]]
+        return [OctaveChange(oct=octave["oct"],text=octave["text"]),s[1]]
+
+    def oct_mod(self,s):
+        octave = s[0]
+        return [OctaveMod(oct=octave["oct"],text=octave["text"]),s[1]]
+
+    def escaped_octave(self,s):
+        value = s[0][1:-1]
+        return {"oct": int(value), "text":s[0].value}
 
     def octave(self,s):
         value = sum([1 if char=='^' else -1 for char in s[0].value])
@@ -57,20 +67,29 @@ class ZiffersTransformer(Transformer):
 
     def dur_change(self,s):
         duration = s[0]
-        return [Duration(dur=duration["dur"], text=duration["text"]),s[1]]
+        return [DurationChange(dur=duration["dur"], text=duration["text"]),s[1]]
 
-    def duration(self,s):
+    def escaped_decimal(self,s):
+        val = s[0]
+        val["text"] = "<"+val["text"]+">"
+        return val
+
+    def duration_chars(self,s):
         durations = [val[1] for val in s]
         characters = "".join([val[0] for val in s])
-        return {"dur": sum(durations), "text":characters[::-1]}
+        return {"dur": sum(durations), "text":characters}
 
-    def dur(self,s):
+    def dotted_dur(self,s):
         key = s[0]
         val = default_durs[key]
         dots = len(s)-1
         if(dots>1):
             val = val * (2.0-(1.0/(2*dots)))
         return [key+"."*dots,val]
+
+    def decimal(self,s):
+        val = s[0]
+        return {"dur": float(val),"text": val.value}
 
     def dot(self,s):
         return "."

@@ -5,11 +5,15 @@ class Meta:
     text: str
 
 @dataclass
-class Duration(Meta):
+class DurationChange(Meta):
     dur: float
 
 @dataclass
-class Octave(Meta):
+class OctaveChange(Meta):
+    oct: int
+
+@dataclass
+class OctaveMod(Meta):
     oct: int
 
 @dataclass
@@ -25,7 +29,6 @@ class Pitch(Event):
 @dataclass
 class RandomPitch(Event):
     pc: int = None
-    
 
 @dataclass
 class Chord(Event):
@@ -42,8 +45,10 @@ class Ziffers:
     text: str = None
     def __post_init__(self):
         self.text = self.collect_text()
-    def collect_text(self):
+    def collect_text(self) -> str:
         return "".join([val.text for val in self.values])
+    def pcs(self) -> list[int]:
+        return [val.pc for val in self.values if type(val) is Pitch]
 
 @dataclass
 class Sequence(Meta):

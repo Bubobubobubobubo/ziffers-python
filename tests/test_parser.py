@@ -1,4 +1,5 @@
 from ziffers import *
+import pytest
 
 def test_can_parse():
     expressions = [
@@ -24,10 +25,22 @@ def test_can_parse():
     print(results)
     assert all(results)
 
-#print(ziffers_parser.parse("[1 [2 3]]"))
-#print(ziffers_parser.parse("(1 (1,3) 1..3)"))
-#print(ziffers_parser.parse("_^ q _qe^3 qww_4 _123 <1 2>"))
-#print(ziffers_parser.parse("q _2 _ 3 ^ 343"))
-#print(ziffers_parser.parse("2 qe2 e4").values)
-#print(ziffers_parser.parse("q 2 <3 343>"))
-#print(ziffers_parser.parse("q (2 <3 343 (3 4)>)"))
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "1 2 3",
+        "q3 e4 s5",
+    ],
+)
+def test_parsing_text(pattern: str):
+    assert parse_expression(pattern).text == pattern
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+        ("1 2 3", [1,2,3]),
+        ("q2 eq3", [2,3]),
+    ],
+)
+def test_pcs(pattern: str, expected: list):
+    assert parse_expression(pattern).pcs == expected

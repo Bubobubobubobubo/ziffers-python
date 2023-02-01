@@ -7,7 +7,7 @@ if __name__ == "__main__":
             'Chords': "0 024 2 246",
             'Note lengths': "w 0 h 1 q 2 e 3 s 4",
             'Subdivision': "[1 2 [3 4]]",
-            'Decimal durations': "0.25 0 1 [0.333]2 3",
+            'Decimal durations': "0.25 0 1 <0.333>2 3",
             'Octaves': "^ 0 ^ 1 _ 2 _ 3",
             'Escaped octave': "<2> 1 <1>1<-2>3",
             'Roman chords': "i ii iii+4 iv+5 v+8 vi+10 vii+20",
@@ -32,8 +32,9 @@ if __name__ == "__main__":
             'Functions': "(0 1 2 3){x%3==0?x-2:x+2}",
             'Polynomials': "(-10..10){(x**3)*(x+1)%12}",
     }
-    for expression in expressions:
-        try: 
-            parse_expression(expression)
+    for ex in expressions:
+        try:
+            print(f"Parsed: "+parse_expression(expressions[ex]).text)
         except Exception as e:
-            print(f"[red]Failed on {expression}[/red]: {str(e)[0:40]}...")
+            print(f"[red]Failed on {ex}[/red]")
+            #print(f"[red]Failed on {ex}[/red]: {str(e)[0:40]}...")
