@@ -12,9 +12,9 @@ class ZiffersTransformer(Transformer):
         values = flatten(items[0].values)
         return Sequence(values=values,text="("+"".join([val.text for val in values])+")")
 
-    def randompitch(self,s):
+    def random_integer(self,s):
         val = s[0][1:-1].split(",")
-        return RandomPitch(min=val[0],max=val[1],text=s[0])
+        return RandomInteger(min=val[0],max=val[1],text=s[0])
 
     def range(self,s):
         val = s[0].split("..")
@@ -73,6 +73,12 @@ class ZiffersTransformer(Transformer):
         val = s[0]
         val["text"] = "<"+val["text"]+">"
         return val
+
+    def random_pitch(self,s):
+        return RandomPitch(text="?")
+
+    def random_percent(self,s):
+        return RandomPercent(text="%")
 
     def duration_chars(self,s):
         durations = [val[1] for val in s]

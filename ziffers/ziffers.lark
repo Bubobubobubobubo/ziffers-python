@@ -1,12 +1,14 @@
     
     ?value: root      
-    root: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | randompitch | range | list | subdivision)*
+    root: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | subdivision)*
     list: "(" root ")"
-    randompitch: /\(-?[0-9],-?[0-9]\)/
+    random_integer: /\(-?[0-9]+,-?[0-9]+\)/
     range: /-?[0-9]\.\.-?[0-9]/
     cycle: "<" root ">"
     pc: prefix* pitch
     pitch: /-?[0-9TE]/
+    random_pitch: "?"
+    random_percent: "%"
     prefix: (octave | duration_chars | escaped_decimal | escaped_octave)
     oct_change: escaped_octave WS
     escaped_octave: /<-?[0-9]>/

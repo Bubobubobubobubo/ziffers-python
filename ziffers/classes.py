@@ -31,6 +31,10 @@ class RandomPitch(Event):
     pc: int = None
 
 @dataclass
+class RandomPercent(Meta):
+    percent: float = None
+
+@dataclass
 class Chord(Event):
     pcs: list[Pitch] = None
     
@@ -63,7 +67,7 @@ class Cyclic(Sequence):
     cycle: int = 0
 
 @dataclass
-class RandomPitch(Meta):
+class RandomInteger(Meta):
     min: int
     max: int
 
