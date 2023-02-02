@@ -1,29 +1,59 @@
+    // Root for the rules    
+    ?root: sequence  
+    sequence: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | lisp_operation | list_op | subdivision | eval)*
     
-    ?value: root      
-    root: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | subdivision)*
-    list: "(" root ")"
-    random_integer: /\(-?[0-9]+,-?[0-9]+\)/
-    range: /-?[0-9]\.\.-?[0-9]/
-    cycle: "<" root ">"
+    // Pitch classes
     pc: prefix* pitch
-    pitch: /-?[0-9TE]/
-    random_pitch: "?"
-    random_percent: "%"
     prefix: (octave | duration_chars | escaped_decimal | escaped_octave)
-    oct_change: escaped_octave WS
-    escaped_octave: /<-?[0-9]>/
-    oct_mod: octave WS
-    octave: /[_^]+/
-    chord: pc pc+
+    pitch: /-?[0-9TE]/
     escaped_decimal: "<" decimal ">"
-    dur_change: (duration_chars | decimal) WS
+    escaped_octave: /<-?[0-9]>/
+    octave: /[_^]+/
+   
+    // Chords
+    chord: pc pc+
+  
+    // List
+    list: prefix* "(" sequence ")"
+
+    // Right recursive list operation
+    list_op: list (operator (list | number))+
+    operator: /([\+\-\*\/%]|<<|>>)/
+    ?number: SIGNED_NUMBER
+
+    // Lisp like list operation
+    lisp_operation:  "(" operator WS sequence ")"
+ 
+    // Durations
     duration_chars: dotted_dur+
     dotted_dur: dchar dot*
     decimal: /-?[0-9]+\.[0-9]+/
     dchar: /[mklpdcwyhnqaefsxtgujzo]/
     dot: "."
-    subitems: (pc | WS | chord | cycle | subdivision)*
-    subdivision: "[" subitems "]"
 
+    // Subdivision
+    subdivision: "[" subitems "]"
+    subitems: (pc | WS | chord | cycle | subdivision)*
+
+    // Control characters modifying future events
+    oct_mod: octave WS
+    oct_change: escaped_octave WS
+    dur_change: (duration_chars | decimal) WS
+
+    // Generative rules
+    random_integer: /\(-?[0-9]+,-?[0-9]+\)/
+    range: /-?[0-9]\.\.-?[0-9]/
+    cycle: "<" sequence ">"
+    random_pitch: "?"
+    random_percent: "%"
+
+    // Rules for evaluating clauses inside {}
+    // TODO: Support for parenthesis?
+    eval: "{" operation "}"
+    operation: atom (operator atom)+  
+    atom: (SIGNED_NUMBER | DECIMAL | random_integer)
+
+    %import common.NUMBER
     %import common.SIGNED_NUMBER
+    %import common.DECIMAL
     %import common.WS

@@ -1,16 +1,13 @@
 from lark import Transformer
 from .classes import *
-from .common import flatten
+from .common import flatten, sum_dict
 from .defaults import default_durs
+import operator
 
 class ZiffersTransformer(Transformer):
     
-    def root(self, items):
-        return Ziffers(flatten(items))
-
-    def list(self,items):
-        values = flatten(items[0].values)
-        return Sequence(values=values,text="("+"".join([val.text for val in values])+")")
+    def sequence(self,items):
+        return Sequence(values=flatten(items))
 
     def random_integer(self,s):
         val = s[0][1:-1].split(",")
@@ -22,19 +19,12 @@ class ZiffersTransformer(Transformer):
     
     def cycle(self, items):
         values = items[0].values
-        no_spaces = [val for val in values if type(val)!=Meta]
-        return Cyclic(values=no_spaces,text="<"+"".join([val.text for val in values])+">")
+        return Cyclic(values=values, wrapper="<>")
 
     def pc(self, s):
         if(len(s)>1):
             # Collect&sum prefixes from any order: _qee^s4 etc.
-            result = s[0]
-            for hash in s[1:]:
-                for key in hash.keys():
-                    if key in result:
-                        result[key] = result[key] + hash[key]
-                    else:
-                        result[key] = hash[key]            
+            result = sum_dict(s)
             return Pitch(**result)
         else:
             val = s[0]
@@ -89,7 +79,7 @@ class ZiffersTransformer(Transformer):
         key = s[0]
         val = default_durs[key]
         dots = len(s)-1
-        if(dots>1):
+        if(dots>0):
             val = val * (2.0-(1.0/(2*dots)))
         return [key+"."*dots,val]
 
@@ -105,7 +95,7 @@ class ZiffersTransformer(Transformer):
         return chardur
 
     def WS(self,s):
-        return Meta(text=s[0])
+        return Item(text=s[0])
 
     def subdivision(self,items):
         values = flatten(items[0])
@@ -113,3 +103,50 @@ class ZiffersTransformer(Transformer):
 
     def subitems(self,s):
         return s
+
+    # Eval rules
+
+    def eval(self,s):
+        val = s[0]
+        return Eval(values=val,wrapper="{}")
+
+    def operation(self,s):
+        return s
+
+    def atom(self,s):
+        val = s[0].value
+        return Atom(value=val,text=val)
+
+    # List rules
+
+    def list(self,items):
+        if len(items)>1:
+            prefixes = sum_dict(items[0:-1])
+            seq = items[-1]
+            seq.wrapper = "()"
+            seq.text = prefixes["text"] + seq.text
+            seq.update_values(prefixes)
+            return seq
+        else:
+            seq = items[0]
+            seq.wrapper = "()"
+            return seq
+    
+    def SIGNED_NUMBER(self, s):
+        val = s.value
+        return Integer(text=val,value=int(val))
+
+    def lisp_operation(self,s):
+        op = s[0]
+        values = s[1:]
+        return Operation(operator=op,values=values,text="(+"+"".join([v.text for v in values])+")")
+
+    def operator(self,s):
+        val = s[0].value
+        return Operator(text=val)
+
+    def list_items(self,s):
+        return Sequence(values=s)
+
+    def list_op(self,s):
+        return ListOperation(values=s)
