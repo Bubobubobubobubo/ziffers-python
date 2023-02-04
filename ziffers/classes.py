@@ -202,3 +202,12 @@ class Atom(Item):
 class Integer(Item):
     ''' Class for integers '''
     value: int
+
+@dataclass
+class Euclid(Item):
+    ''' Class for euclidean cycles '''
+    pulses: int
+    length: int
+    onset: list
+    offset: list = None
+    rotate: int = None

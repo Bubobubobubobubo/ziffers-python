@@ -1,6 +1,6 @@
     // Root for the rules    
     ?root: sequence  
-    sequence: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | lisp_operation | list_op | subdivision | eval)*
+    sequence: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | lisp_operation | list_op | subdivision | eval | euclid)*
     
     // Pitch classes
     pc: prefix* pitch
@@ -13,14 +13,22 @@
     // Chords
     chord: pc pc+
   
+    // Valid as integer
+    ?number: SIGNED_NUMBER | random_integer
+
     // List
     list: prefix* "(" sequence ")"
 
     // Right recursive list operation
     list_op: list (operator (list | number))+
     operator: /([\+\-\*\/%]|<<|>>)/
-    ?number: SIGNED_NUMBER
 
+    euclid: list euclid_operator list?
+    ?euclid_operator: /<[0-9]+,[0-9]+(,[0-9])?>/
+    
+    // TODO: Support randomization etc.
+    //euclid_operator: (">" | "<") number "," number ["," number] (">" | "<")
+    
     // Lisp like list operation
     lisp_operation:  "(" operator WS sequence ")"
  
@@ -51,7 +59,7 @@
     // TODO: Support for parenthesis?
     eval: "{" operation "}"
     operation: atom (operator atom)+  
-    atom: (SIGNED_NUMBER | DECIMAL | random_integer)
+    atom: (number | DECIMAL)
 
     %import common.NUMBER
     %import common.SIGNED_NUMBER

@@ -11,7 +11,7 @@ class ZiffersTransformer(Transformer):
 
     def random_integer(self,s):
         val = s[0][1:-1].split(",")
-        return RandomInteger(min=val[0],max=val[1],text=s[0])
+        return RandomInteger(min=val[0],max=val[1],text=s[0].value)
 
     def range(self,s):
         val = s[0].split("..")
@@ -136,6 +136,9 @@ class ZiffersTransformer(Transformer):
         val = s.value
         return Integer(text=val,value=int(val))
 
+    def number(self,s):
+        return s
+
     def lisp_operation(self,s):
         op = s[0]
         values = s[1:]
@@ -150,3 +153,18 @@ class ZiffersTransformer(Transformer):
 
     def list_op(self,s):
         return ListOperation(values=s)
+
+    def euclid(self,s):
+        params = s[1][1:-1].split(",")
+        init = {"onset":s[0],"pulses":params[0],"length":params[1]}
+        text = s[0].text+s[1]
+        if len(params)>2:
+            init["rotate"] = params[2]
+        if len(s)>2:
+            init["offset"] = s[2]
+            text = text+s[2].text
+        init["text"] = text
+        return Euclid(**init)
+
+    def euclid_operator(self,s):
+        return s.value
