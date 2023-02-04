@@ -17,6 +17,10 @@ class Item(Meta):
     text: str
 
 @dataclass
+class Whitespace(Item):
+    ''' Class for whitespace '''
+
+@dataclass
 class DurationChange(Item):
     ''' Class for changing duration '''
     dur: float
@@ -73,8 +77,8 @@ class dataclass_property(property): # pylint: disable=invalid-name
 @dataclass
 class Sequence(Meta):
     ''' Class for sequences of items'''
-    values: list
-    text: str = None
+    values: list[Item]
+    text: str = field(init=False)
     _text: str = field(default=None, init=False, repr=False)
 
     @dataclass_property
@@ -85,23 +89,11 @@ class Sequence(Meta):
     def text(self, text: str) -> None:
         self._text = text
 
-    wrapper: str = None
-    _wrapper: str = field(default=None, init=False, repr=False)
-
-    @dataclass_property
-    def wrapper(self) -> str:
-        return self._wrapper
-
-    @wrapper.setter
-    def wrapper(self, wrapper: str) -> None:
-        self._wrapper = wrapper
-        if self.text != None:
-            self.text = self.wrapper[0] + self.text + self.wrapper[1]
+    wrap_start: str = field(default=None, repr=False)
+    wrap_end: str = field(default=None, repr=False)
 
     def __post_init__(self):
         self.text = self.collect_text()
-        if self.text != None and self.wrapper != None:
-            self.text = self.wrapper[0] + self.text + self.wrapper[1]
 
     def update_values(self, new_values):
         ''' Update value attributes from dict '''
@@ -111,8 +103,13 @@ class Sequence(Meta):
                     setattr(obj, key, value)
     
     def collect_text(self) -> str:
-        return "".join([val.text for val in self.values])
-    
+        text = "".join([val.text for val in self.values])
+        if self.wrap_start != None:
+            text = self.wrap_start + text
+        if self.wrap_end != None:
+            text = text + self.wrap_end
+        return text
+
     def pcs(self) -> list[int]:
         return [val.pc for val in self.values if type(val) is Pitch]
     
@@ -125,12 +122,15 @@ class Sequence(Meta):
 @dataclass
 class ListSequence(Sequence):
     ''' Class for Ziffers list sequences '''
-    prefix: dict = None
-    values: list = None
-    def __init__(self):
-        super.__init__()
-        if self.prefix!=None:
-            self.update(self.prefix)
+    wrap_start: str = field(default="(", repr=False)
+    wrap_end: str = field(default=")", repr=False)
+
+@dataclass
+class RepeatedListSequence(Sequence):
+    ''' Class for Ziffers list sequences '''
+    repeats: Item = None
+    wrap_start: str = field(default="(:", repr=False)
+    wrap_end: str = field(default=":)", repr=False)
 
 @dataclass
 class Subdivision(Item):
@@ -141,6 +141,9 @@ class Subdivision(Item):
 class Cyclic(Sequence):
     ''' Class for cyclic sequences'''
     cycle: int = 0
+    wrap_start: str = field(default="<", repr=False)
+    wrap_end: str = field(default=">", repr=False)
+    
     def __post_init__(self):
         super().__post_init__()
         # TODO: Do spaced need to be filtered out?
@@ -189,6 +192,8 @@ class Operation(Item):
 class Eval(Sequence):
     ''' Class for evaluation notation '''
     result: ... = None
+    wrap_start: str = field(default="{", repr=False)
+    wrap_end: str = field(default="}", repr=False)
     def __post_init__(self):
         super().__post_init__()
         self.result = eval(self.text)
@@ -211,3 +216,11 @@ class Euclid(Item):
     onset: list
     offset: list = None
     rotate: int = None
+
+@dataclass
+class RepeatedSequence(Sequence):
+    ''' Class for repeats '''
+    repeats: Item = None
+    wrap_start: str = field(default="[:", repr=False)
+    wrap_end: str = field(default=":]", repr=False)
+    

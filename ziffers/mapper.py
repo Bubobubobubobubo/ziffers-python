@@ -6,8 +6,11 @@ import operator
 
 class ZiffersTransformer(Transformer):
     
+    def start(self,items):
+        return Sequence(values=items[0])
+
     def sequence(self,items):
-        return Sequence(values=flatten(items))
+        return flatten(items)
 
     def random_integer(self,s):
         val = s[0][1:-1].split(",")
@@ -18,8 +21,8 @@ class ZiffersTransformer(Transformer):
         return Range(start=val[0],end=val[1],text=s[0])
     
     def cycle(self, items):
-        values = items[0].values
-        return Cyclic(values=values, wrapper="<>")
+        values = items[0]
+        return Cyclic(values=values)
 
     def pc(self, s):
         if(len(s)>1):
@@ -95,7 +98,7 @@ class ZiffersTransformer(Transformer):
         return chardur
 
     def WS(self,s):
-        return Item(text=s[0])
+        return Whitespace(text=s[0])
 
     def subdivision(self,items):
         values = flatten(items[0])
@@ -108,7 +111,7 @@ class ZiffersTransformer(Transformer):
 
     def eval(self,s):
         val = s[0]
-        return Eval(values=val,wrapper="{}")
+        return Eval(values=val)
 
     def operation(self,s):
         return s
@@ -122,14 +125,28 @@ class ZiffersTransformer(Transformer):
     def list(self,items):
         if len(items)>1:
             prefixes = sum_dict(items[0:-1])
-            seq = items[-1]
-            seq.wrapper = "()"
-            seq.text = prefixes["text"] + seq.text
+            values = items[-1]
+            seq = ListSequence(values=values,wrap_start=prefixes["text"]+"(")
             seq.update_values(prefixes)
             return seq
         else:
-            seq = items[0]
-            seq.wrapper = "()"
+            seq = ListSequence(values=items[0])
+            return seq
+
+    def repeated_list(self,items):
+        if len(items)>2:
+            prefixes = sum_dict(items[0:-2]) # If there are prefixes
+            if items[-1]!=None:
+                seq = RepeatedListSequence(values=items[-2],repeats=items[-1],wrap_end=":"+items[-1].text+")")
+            else:
+                seq = RepeatedListSequence(values=items[-2],repeats=Integer(text='1', value=1))
+            seq.update_values(prefixes)
+            return seq
+        else:
+            if items[-1]!=None:
+                seq = RepeatedListSequence(values=items[-2],repeats=items[-1],wrap_end=":"+items[-1].text+")")
+            else:
+                seq = RepeatedListSequence(values=items[-2],repeats=Integer(text='1', value=1))
             return seq
     
     def SIGNED_NUMBER(self, s):
@@ -138,6 +155,9 @@ class ZiffersTransformer(Transformer):
 
     def number(self,s):
         return s
+
+    def cyclic_number(self,s):
+        return Cyclic(values=s)
 
     def lisp_operation(self,s):
         op = s[0]
@@ -168,3 +188,9 @@ class ZiffersTransformer(Transformer):
 
     def euclid_operator(self,s):
         return s.value
+
+    def repeat(self,s):
+        if s[-1]!=None:
+            return RepeatedSequence(values=s[0],repeats=s[-1],wrap_end=":"+s[-1].text+"]")
+        else:
+            return RepeatedSequence(values=s[0],repeats=Integer(value=1,text='1'))

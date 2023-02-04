@@ -1,6 +1,6 @@
     // Root for the rules    
-    ?root: sequence  
-    sequence: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | lisp_operation | list_op | subdivision | eval | euclid)*
+    ?root: sequence -> start
+    sequence: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
     
     // Pitch classes
     pc: prefix* pitch
@@ -14,15 +14,21 @@
     chord: pc pc+
   
     // Valid as integer
-    ?number: SIGNED_NUMBER | random_integer
+    ?number: SIGNED_NUMBER | random_integer | cyclic_number
+    cyclic_number: "<" number (WS number)* ">"
+
+    // Repeats
+    repeat: "[:" sequence ":" [number] "]"
 
     // List
     list: prefix* "(" sequence ")"
+    repeated_list: prefix* "(:" sequence ":" [number] ")"
 
     // Right recursive list operation
     list_op: list (operator (list | number))+
     operator: /([\+\-\*\/%]|<<|>>)/
 
+    // Euclidean cycles
     euclid: list euclid_operator list?
     ?euclid_operator: /<[0-9]+,[0-9]+(,[0-9])?>/
     
