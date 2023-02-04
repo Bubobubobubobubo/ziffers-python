@@ -1493,6 +1493,7 @@ SCALES = {
     "Chromatic": 111111111111,
 }
 
+
 def get_scale(name: str) -> list:
     """Get a scale from the global scale list"""
     scale = SCALES.get(
@@ -1500,5 +1501,22 @@ def get_scale(name: str) -> list:
         SCALES["Chromatic"])
     return list(map(int, str(scale)))
 
+
+def note_from_pc(
+        root: int,
+        pitch_class: int,
+        intervals: list[int]
+    ) -> int:
+    """Resolve a pitch class into a note from a scale"""
+    intervals = sum(intervals[0:pitch_class])
+    return (root + intervals if pitch_class >= 0 else
+            root - intervals)
+
+
 if __name__ == "__main__":
     print(get_scale("Godatic"))
+
+    # Taking the fifth from the chromatic scale
+    user_scale = get_scale("chromatic")
+    note = note_from_pc(60, -7, user_scale)
+    print(f"Note: {note} from {user_scale}")
