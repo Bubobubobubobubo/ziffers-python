@@ -1505,9 +1505,12 @@ def get_scale(name: str) -> list:
 def note_from_pc(
         root: int,
         pitch_class: int,
-        intervals: list[int]
+        intervals: list[int|float],
+        cents: bool = False
     ) -> int:
     """Resolve a pitch class into a note from a scale"""
+    if cents:
+        intervals = list(map(lambda x: x / 100), intervals)
     intervals = sum(intervals[0:pitch_class])
     return (root + intervals if pitch_class >= 0 else
             root - intervals)
