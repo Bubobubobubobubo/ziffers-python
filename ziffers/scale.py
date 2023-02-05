@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+from math import floor
 
 SCALES = {
     "Minoric": 444,
@@ -1536,9 +1537,17 @@ def note_from_pc(
     root = note_to_midi(root) if isinstance(root, str) else root
     intervals = get_scale(intervals) if isinstance(intervals, str) else intervals
     intervals = list(map(lambda x: x / 100), intervals) if cents else intervals
+    scale_length = len(intervals)
+
+    # Resolve pitch classes to the scale and calculate octave
+    if pitch_class>=scale_length or pitch_class<0:
+        octave += floor(pitch_class/scale_length)
+        pitch_class = scale_length-(abs(pitch_class)%scale_length) if pitch_class<0 else pitch_class%scale_length
+        if pitch_class == scale_length:
+            pitch_class = 0 
 
     # Computing the result
-    interval_sum = sum(intervals[0 : pitch_class % len(intervals)])
+    interval_sum = sum(intervals[0 : pitch_class])
 
     note = root + interval_sum if pitch_class >= 0 else root - interval_sum
-    return note + octave * sum(intervals) + modifier
+    return note + (octave * sum(intervals)) + modifier

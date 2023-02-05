@@ -10,7 +10,7 @@ def sum_dict(arr: list[dict]) -> dict:
     """Sums a list of dicts: [{a:3,b:3},{b:1}] -> {a:3,b:4}"""
     result = arr[0]
     for element in arr[1:]:
-        for key in hash.keys():
+        for key in element.keys():
             if key in result:
                 result[key] = result[key] + element[key]
             else:
