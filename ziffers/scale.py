@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import re
+
 SCALES = {
     "Minoric": 444,
     "Thaptic": 4341,
@@ -1493,6 +1495,33 @@ SCALES = {
     "Chromatic": 111111111111,
 }
 
+note_to_interval = {
+    "C": 0,
+    "D": 2,
+    "E": 4,
+    "F": 5,
+    "G": 7,
+    "A": 9,
+    "B": 11
+}
+
+modifiers = {
+    "#": 1,
+    "b": -1,
+    "s": 1,
+}
+
+def note_to_midi(name: str) -> int:
+    ''' Parse note name to midi '''
+    items = re.match(r"^([a-gA-G])([#bs])?([1-9])?$",name)
+    if items==None:
+        raise ValueError("Invalid note name: "+name)
+    values = items.groups()
+    octave = int(values[2]) if values[2] else 4
+    modifier = modifiers[values[1]] if values[1] else 0
+    interval = note_to_interval[values[0].capitalize()]
+    return 12 + octave * 12 + interval + modifier
+
 
 def get_scale(name: str) -> list:
     """Get a scale from the global scale list"""
@@ -1503,17 +1532,21 @@ def get_scale(name: str) -> list:
 
 
 def note_from_pc(
-        root: int,
+        root: int|str,
         pitch_class: int,
         intervals: list[int|float],
-        cents: bool = False
+        cents: bool = False,
+        octave: int = 0,
+        addition: int = 0
     ) -> int:
     """Resolve a pitch class into a note from a scale"""
+    if type(root)==str:
+        root = note_to_midi(root)
     if cents:
         intervals = list(map(lambda x: x / 100), intervals)
-    intervals = sum(intervals[0:pitch_class])
-    return (root + intervals if pitch_class >= 0 else
-            root - intervals)
+    interval_sum = sum(intervals[0:pitch_class])
+    note = (root + interval_sum if pitch_class >= 0 else root - interval_sum)
+    return note + octave*sum(intervals) + addition
 
 
 if __name__ == "__main__":
