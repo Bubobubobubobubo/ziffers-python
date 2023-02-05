@@ -1547,7 +1547,6 @@ def note_from_pc(
             pitch_class = 0 
 
     # Computing the result
-    interval_sum = sum(intervals[0 : pitch_class])
-
-    note = root + interval_sum if pitch_class >= 0 else root - interval_sum
+    note = root + sum(intervals[0 : pitch_class])
+ 
     return note + (octave * sum(intervals)) + modifier
