@@ -1,7 +1,7 @@
 from lark import Transformer
 from .classes import *
 from .common import flatten, sum_dict
-from .defaults import default_durs
+from .defaults import DEFAULT_DURS
 import operator
 
 
@@ -66,7 +66,7 @@ class ZiffersTransformer(Transformer):
         chars = ""
         durs = 0.0
         for (dchar, dots) in s:
-            val = default_durs[dchar]
+            val = DEFAULT_DURS[dchar]
             if dots > 0:
                 val = val * (2.0 - (1.0 / (2 * dots)))
             chars = chars + (dchar + "." * dots)
@@ -98,7 +98,7 @@ class ZiffersTransformer(Transformer):
 
     def dotted_dur(self, s):
         key = s[0]
-        val = default_durs[key]
+        val = DEFAULT_DURS[key]
         dots = len(s) - 1
         if dots > 0:
             val = val * (2.0 - (1.0 / (2 * dots)))

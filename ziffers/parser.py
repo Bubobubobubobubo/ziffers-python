@@ -15,5 +15,6 @@ ziffers_parser = Lark.open(
 )
 
 
-def parse_expression(expr):
+def parse_expression(expr: str):
+    """Parse an expression using the Ziffers parser"""
     return ziffers_parser.parse(expr)
