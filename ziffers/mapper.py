@@ -1,11 +1,42 @@
 from lark import Transformer
-from .classes import *
-from .common import flatten, sum_dict
+from .classes import (
+    Whitespace,
+    DurationChange,
+    OctaveChange,
+    OctaveMod,
+    Pitch,
+    RandomPitch,
+    RandomPercent,
+    Chord,
+    Sequence,
+    ListSequence,
+    RepeatedListSequence,
+    Subdivision,
+    Cyclic,
+    RandomInteger,
+    Range,
+    Operator,
+    ListOperation,
+    Operation,
+    Eval,
+    Atom,
+    Integer,
+    Euclid,
+    RepeatedSequence,
+)
+from .common import (
+    flatten,
+    sum_dict
+)
 from .defaults import DEFAULT_DURS
-import operator
 
 
 class ZiffersTransformer(Transformer):
+
+    """
+    Rules for transforming Ziffers expressions into tree.
+    """
+
     def start(self, items):
         return Sequence(values=items[0])
 
