@@ -59,8 +59,26 @@ class ZiffersTransformer(Transformer):
         return Chord(pcs=s,text="".join([val.text for val in s]))
 
     def dur_change(self,s):
-        duration = s[0]
-        return [DurationChange(dur=duration["dur"], text=duration["text"]),s[1]]
+        durs = s[0]
+        return DurationChange(dur=durs[1], text=durs[0])
+
+    def char_change(self,s):
+        chars = ""
+        durs = 0.0
+        for (dchar,dots) in s:
+            val = default_durs[dchar]
+            if(dots>0):
+                val = val * (2.0-(1.0/(2*dots)))
+            chars = chars + (dchar+"."*dots)
+            durs = durs + val
+        return [chars,durs]
+
+    def dchar_not_prefix(self,s):
+        dur = s[0].split(".",1)
+        dots = 0
+        if len(dur)>1:
+            dots = len(dur[1])+1
+        return [dur[0],dots]
 
     def escaped_decimal(self,s):
         val = s[0]

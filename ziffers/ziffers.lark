@@ -52,7 +52,9 @@
     // Control characters modifying future events
     oct_mod: octave WS
     oct_change: escaped_octave WS
-    dur_change: (duration_chars | decimal) WS
+    dur_change: (decimal | char_change)
+    char_change: dchar_not_prefix+
+    dchar_not_prefix: /([mklpdcwyhnqaefsxtgujzo](\.)*)(?!\d)/
 
     // Generative rules
     random_integer: /\(-?[0-9]+,-?[0-9]+\)/
