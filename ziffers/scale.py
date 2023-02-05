@@ -1531,21 +1531,25 @@ def get_scale(name: str) -> list:
 
 
 def note_from_pc(
-        root: int|str,
+        root: int | str,
         pitch_class: int,
         intervals: str | list[int|float],
         cents: bool = False,
         octave: int = 0,
-        modifier: int = 0
-    ) -> int:
+        modifier: int = 0) -> int:
     """Resolve a pitch class into a note from a scale"""
-    if type(root)==str:
+
+    if isinstance(root, str):
         root = note_to_midi(root)
+
+    if isinstance(intervals, str):
+        intervals = get_scale(intervals)
+
     if cents:
         intervals = list(map(lambda x: x / 100), intervals)
-    if type(intervals) == str:
-        intervals = get_scale(intervals)
+
     interval_sum = sum(intervals[0:pitch_class])
+
     note = (root + interval_sum if pitch_class >= 0 else root - interval_sum)
     return note + octave*sum(intervals) + modifier
 
