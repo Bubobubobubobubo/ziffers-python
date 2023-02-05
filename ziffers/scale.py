@@ -1533,31 +1533,20 @@ def get_scale(name: str) -> list:
 def note_from_pc(
         root: int | str,
         pitch_class: int,
-        intervals: str | list[int|float],
+        intervals: str | list[int | float],
         cents: bool = False,
         octave: int = 0,
         modifier: int = 0) -> int:
     """Resolve a pitch class into a note from a scale"""
 
-    if isinstance(root, str):
-        root = note_to_midi(root)
+    # Initialization
+    root = note_to_midi(root) if isinstance(root, str) else root
+    intervals = get_scale(intervals) if isinstance(
+        intervals, str) else intervals
+    intervals = list(map(lambda x: x / 100), intervals) if cents else intervals
 
-    if isinstance(intervals, str):
-        intervals = get_scale(intervals)
-
-    if cents:
-        intervals = list(map(lambda x: x / 100), intervals)
-
-    interval_sum = sum(intervals[0:pitch_class])
+    # Computing the result
+    interval_sum = sum(intervals[0:pitch_class % len(intervals)])
 
     note = (root + interval_sum if pitch_class >= 0 else root - interval_sum)
     return note + octave*sum(intervals) + modifier
-
-
-if __name__ == "__main__":
-    print(get_scale("Godatic"))
-
-    # Taking the fifth from the chromatic scale
-    user_scale = get_scale("chromatic")
-    note = note_from_pc(60, -7, user_scale)
-    print(f"Note: {note} from {user_scale}")
