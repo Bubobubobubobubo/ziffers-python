@@ -43,4 +43,4 @@ def test_parsing_text(pattern: str):
     ],
 )
 def test_pcs(pattern: str, expected: list):
-    assert parse_expression(pattern).pcs == expected
+    assert parse_expression(pattern).pcs() == expected
