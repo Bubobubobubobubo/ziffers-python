@@ -1495,15 +1495,7 @@ SCALES = {
     "Chromatic": 111111111111,
 }
 
-note_to_interval = {
-    "C": 0,
-    "D": 2,
-    "E": 4,
-    "F": 5,
-    "G": 7,
-    "A": 9,
-    "B": 11
-}
+note_to_interval = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
 modifiers = {
     "#": 1,
@@ -1511,10 +1503,11 @@ modifiers = {
     "s": 1,
 }
 
+
 def note_to_midi(name: str) -> int:
-    ''' Parse note name to midi '''
-    items = re.match(r"^([a-gA-G])([#bs])?([1-9])?$",name)
-    if items==None:
+    """Parse note name to midi"""
+    items = re.match(r"^([a-gA-G])([#bs])?([1-9])?$", name)
+    if items == None:
         return 60
     values = items.groups()
     octave = int(values[2]) if values[2] else 4
@@ -1522,31 +1515,30 @@ def note_to_midi(name: str) -> int:
     interval = note_to_interval[values[0].capitalize()]
     return 12 + octave * 12 + interval + modifier
 
+
 def get_scale(name: str) -> list:
     """Get a scale from the global scale list"""
-    scale = SCALES.get(
-        name.lower().capitalize(),
-        SCALES["Chromatic"])
+    scale = SCALES.get(name.lower().capitalize(), SCALES["Chromatic"])
     return list(map(int, str(scale)))
 
 
 def note_from_pc(
-        root: int | str,
-        pitch_class: int,
-        intervals: str | list[int | float],
-        cents: bool = False,
-        octave: int = 0,
-        modifier: int = 0) -> int:
+    root: int | str,
+    pitch_class: int,
+    intervals: str | list[int | float],
+    cents: bool = False,
+    octave: int = 0,
+    modifier: int = 0,
+) -> int:
     """Resolve a pitch class into a note from a scale"""
 
     # Initialization
     root = note_to_midi(root) if isinstance(root, str) else root
-    intervals = get_scale(intervals) if isinstance(
-        intervals, str) else intervals
+    intervals = get_scale(intervals) if isinstance(intervals, str) else intervals
     intervals = list(map(lambda x: x / 100), intervals) if cents else intervals
 
     # Computing the result
-    interval_sum = sum(intervals[0:pitch_class % len(intervals)])
+    interval_sum = sum(intervals[0 : pitch_class % len(intervals)])
 
-    note = (root + interval_sum if pitch_class >= 0 else root - interval_sum)
-    return note + octave*sum(intervals) + modifier
+    note = root + interval_sum if pitch_class >= 0 else root - interval_sum
+    return note + octave * sum(intervals) + modifier
