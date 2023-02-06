@@ -1,5 +1,6 @@
 from lark import Transformer
 from .classes import (
+    Ziffers,
     Whitespace,
     DurationChange,
     OctaveChange,
