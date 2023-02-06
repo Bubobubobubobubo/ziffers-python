@@ -7,7 +7,8 @@ import operator
 
 class ZiffersTransformer(Transformer):
     def start(self, items):
-        return Sequence(values=items[0])
+        seq = Sequence(values=items[0])
+        return Ziffers(sequence=seq,options={})
 
     def sequence(self, items):
         return flatten(items)
@@ -41,26 +42,26 @@ class ZiffersTransformer(Transformer):
 
     def oct_change(self, s):
         octave = s[0]
-        return [OctaveChange(oct=octave["oct"], text=octave["text"]), s[1]]
+        return [OctaveChange(value=octave["octave"], text=octave["text"]), s[1]]
 
     def oct_mod(self, s):
         octave = s[0]
-        return [OctaveMod(oct=octave["oct"], text=octave["text"]), s[1]]
+        return [OctaveMod(value=octave["octave"], text=octave["text"]), s[1]]
 
     def escaped_octave(self, s):
         value = s[0][1:-1]
-        return {"oct": int(value), "text": s[0].value}
+        return {"octave": int(value), "text": s[0].value}
 
     def octave(self, s):
         value = sum([1 if char == "^" else -1 for char in s[0].value])
-        return {"oct": value, "text": s[0].value}
+        return {"octave": value, "text": s[0].value}
 
     def chord(self, s):
         return Chord(pcs=s, text="".join([val.text for val in s]))
 
     def dur_change(self, s):
         durs = s[0]
-        return DurationChange(dur=durs[1], text=durs[0])
+        return DurationChange(value=durs[1], text=durs[0])
 
     def char_change(self, s):
         chars = ""
@@ -94,7 +95,7 @@ class ZiffersTransformer(Transformer):
     def duration_chars(self, s):
         durations = [val[1] for val in s]
         characters = "".join([val[0] for val in s])
-        return {"dur": sum(durations), "text": characters}
+        return {"duration": sum(durations), "text": characters}
 
     def dotted_dur(self, s):
         key = s[0]
@@ -106,7 +107,7 @@ class ZiffersTransformer(Transformer):
 
     def decimal(self, s):
         val = s[0]
-        return {"dur": float(val), "text": val.value}
+        return {"duration": float(val), "text": val.value}
 
     def dot(self, s):
         return "."

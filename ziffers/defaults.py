@@ -35,3 +35,8 @@ DEFAULT_DURS = {
     "o": 8 / 1920,  # ~0.00416
     "z": 0.0,  # 0
 }
+
+DEFAULT_OPTIONS = {
+  "octave": 0,
+  "duration": 0.25
+}

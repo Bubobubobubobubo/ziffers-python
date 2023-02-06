@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 import operator
 from typing import Any
-
+import random
+from .defaults import DEFAULT_OPTIONS
+import itertools
 
 @dataclass
 class Meta:
@@ -12,7 +14,13 @@ class Meta:
         for key, value in new_values.items():
             if hasattr(self, key):
                 setattr(self, key, value)
-
+    
+    def update_new(self, new_values):
+        """Updates new attributes from dict"""
+        for key, value in new_values.items():
+            if hasattr(self, key):
+                if getattr(self,key) == None:
+                    setattr(self, key, value)
 
 @dataclass
 class Item(Meta):
@@ -25,33 +33,39 @@ class Item(Meta):
 class Whitespace(Item):
     """Class for whitespace"""
 
+    item_type: str = None
+
 
 @dataclass
 class DurationChange(Item):
     """Class for changing duration"""
 
-    dur: float
-
+    value: float
+    key: str = "duration"
+    item_type: str = "change"
 
 @dataclass
 class OctaveChange(Item):
     """Class for changing octave"""
 
-    oct: int
+    value: int
+    key: str = "octave"
+    item_type: str = "change"
 
 
 @dataclass
 class OctaveMod(Item):
     """Class for modifying octave"""
 
-    oct: int
-
+    value: int
+    key: str = "octave"
+    item_type: str = "add"
 
 @dataclass
 class Event(Item):
     """Abstract class for events with duration"""
 
-    dur: float = None
+    duration: float = None
 
 
 @dataclass
@@ -59,8 +73,8 @@ class Pitch(Event):
     """Class for pitch in time"""
 
     pc: int = None
-    dur: float = None
-    oct: int = None
+    duration: float = None
+    octave: int = None
 
 
 @dataclass
@@ -90,37 +104,32 @@ class Function(Event):
 
     run: str = None
 
-
-class dataclass_property(property):  # pylint: disable=invalid-name
-    """Hack for dataclass setters"""
-
-    def __set__(self, __obj: Any, __value: Any) -> None:
-        if isinstance(__value, self.__class__):
-            return None
-        return super().__set__(__obj, __value)
-
-
 @dataclass
 class Sequence(Meta):
     """Class for sequences of items"""
 
     values: list[Item]
-    text: str = field(init=False)
-    _text: str = field(default=None, init=False, repr=False)
-
-    @dataclass_property
-    def text(self) -> str:
-        return self._text
-
-    @text.setter
-    def text(self, text: str) -> None:
-        self._text = text
-
+    text: str = None
     wrap_start: str = field(default=None, repr=False)
     wrap_end: str = field(default=None, repr=False)
+    local_index: int = 0
 
     def __post_init__(self):
         self.text = self.collect_text()
+        # TODO: Filter out whitespace if not needed?
+        # self.values = list(filter(lambda elm: not isinstance(elm, Whitespace), self.values))
+
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        if self.local_index<len(self.values):
+            next_item = self.values[self.local_index]
+            self.local_index += 1
+            return next_item
+        else:
+            self.local_index = 0
+            raise StopIteration
 
     def update_values(self, new_values):
         """Update value attributes from dict"""
@@ -136,16 +145,6 @@ class Sequence(Meta):
         if self.wrap_end != None:
             text = text + self.wrap_end
         return text
-
-    def pcs(self) -> list[int]:
-        return [val.pc for val in self.values if type(val) is Pitch]
-
-    def durations(self) -> list[float]:
-        return [val.dur for val in self.values if type(val) is Pitch]
-
-    def pairs(self) -> list[tuple]:
-        return [(val.pc, val.dur) for val in self.values if type(val) is Pitch]
-
 
 @dataclass
 class ListSequence(Sequence):
@@ -182,7 +181,13 @@ class Cyclic(Sequence):
     def __post_init__(self):
         super().__post_init__()
         # TODO: Do spaced need to be filtered out?
-        self.values = [val for val in self.values if type(val) != Item]
+        self.values = [val for val in self.values if isinstance(val,Whitespace)]
+
+    def value(self):
+        return self.values[self.cycle]
+
+    def next_cycle(self, cycle: int):
+        self.cycle = self.cycle+1
 
 
 @dataclass
@@ -192,13 +197,22 @@ class RandomInteger(Item):
     min: int
     max: int
 
+    def __post_init__(self):
+        if self.min>self.max:
+            new_max = self.min
+            self.min = self.max
+            self.max = new_max
+
+    def value(self):
+        return random.randint(self.min,self.max)
+
 
 @dataclass
 class Range(Item):
     """Class for range"""
 
-    start: int
-    end: int
+    start: int = None
+    end: int = None
 
 
 ops = {
@@ -281,3 +295,58 @@ class RepeatedSequence(Sequence):
     repeats: Item = None
     wrap_start: str = field(default="[:", repr=False)
     wrap_end: str = field(default=":]", repr=False)
+
+@dataclass
+class Ziffers(Meta):
+    """Main class for holding options and the current state"""
+
+    sequence: Sequence
+    options: dict  = field(default_factory=DEFAULT_OPTIONS)
+    loop_i: int = 0
+    current: Item = None
+    it: iter = None
+
+    def __post_init__(self):
+        self.it = iter(self.sequence)
+
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        try:
+            self.current = next(self.it)
+
+            # Skip whitespace and collect duration & octave changes  
+            while isinstance(self.current,(Whitespace,DurationChange,OctaveChange,OctaveMod)):
+                if self.current.item_type == "change":
+                    self.options[self.current.key] = self.current.value
+                elif self.current.item_type == "add":
+                    self.options[self.current.key] = self.current.value
+                self.current = next(self.it)
+        
+        except StopIteration: # Start from the beginning
+            self.current = next(self.it)
+        
+        self.current.update_new(self.options)        
+        
+        self.loop_i += 1
+        return self.current
+
+    def take(self,num: int) -> list:
+        return list(itertools.islice(iter(self), num))
+
+    def set_defaults(self,options: dict):
+        self.options = DEFAULT_OPTIONS | options
+
+    # TODO: Handle options and generated values
+    def pcs(self) -> list[int]:
+        return [val.pc for val in self.sequence.values if isinstance(val,Pitch)]
+
+    def durations(self) -> list[float]:
+        return [val.dur for val in self.sequence.values if isinstance(val,Pitch)]
+
+    def pairs(self) -> list[tuple]:
+        return [(val.pc,val.dur) for val in self.sequence.values if isinstance(val,Pitch)]
+
+    def octaves(self) -> list[int]:
+        return [val.octave for val in self.sequence.values if isinstance(val,Pitch)]

@@ -47,3 +47,7 @@ def test_parsing_text(pattern: str):
 )
 def test_pcs(pattern: str, expected: list):
     assert parse_expression(pattern).pcs() == expected
+
+# TODO: Add tests for octaves
+#        ("__6 _0 _1 _2 _3 _4 _5 _6 0 1 2 3 4 5 6 ^0 ^1 ^2 ^3 ^4 ^5 ^6 ^^0", [-2, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2]),
+#        ("_ 1 _2 <3>3 ^^4", [-1,-2,3,-1]),
