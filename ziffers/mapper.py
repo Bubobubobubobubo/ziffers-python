@@ -40,7 +40,7 @@ class ZiffersTransformer(Transformer):
 
     def start(self, items):
         seq = Sequence(values=items[0])
-        return Ziffers(sequence=seq,options={})
+        return Ziffers(values=seq,options={})
 
     def sequence(self, items):
         return flatten(items)

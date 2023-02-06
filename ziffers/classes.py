@@ -297,20 +297,17 @@ class RepeatedSequence(Sequence):
     wrap_end: str = field(default=":]", repr=False)
 
 @dataclass
-class Ziffers(Meta):
+class Ziffers(Sequence):
     """Main class for holding options and the current state"""
 
-    sequence: Sequence
     options: dict  = field(default_factory=DEFAULT_OPTIONS)
     loop_i: int = 0
     current: Item = None
     it: iter = None
 
     def __post_init__(self):
-        self.it = iter(self.sequence)
-
-    def __iter__(self):
-        return self
+        super().__post_init__()
+        self.it = iter(self.values)
     
     def __next__(self):
         try:
@@ -340,13 +337,13 @@ class Ziffers(Meta):
 
     # TODO: Handle options and generated values
     def pcs(self) -> list[int]:
-        return [val.pc for val in self.sequence.values if isinstance(val,Pitch)]
+        return [val.pc for val in self.values if isinstance(val,Pitch)]
 
     def durations(self) -> list[float]:
-        return [val.dur for val in self.sequence.values if isinstance(val,Pitch)]
+        return [val.dur for val in self.values if isinstance(val,Pitch)]
 
     def pairs(self) -> list[tuple]:
-        return [(val.pc,val.dur) for val in self.sequence.values if isinstance(val,Pitch)]
+        return [(val.pc,val.dur) for val in self.values if isinstance(val,Pitch)]
 
     def octaves(self) -> list[int]:
-        return [val.octave for val in self.sequence.values if isinstance(val,Pitch)]
+        return [val.octave for val in self.values if isinstance(val,Pitch)]
