@@ -318,7 +318,11 @@ class Ziffers(Sequence):
                 if self.current.item_type == "change":
                     self.options[self.current.key] = self.current.value
                 elif self.current.item_type == "add":
-                    self.options[self.current.key] += self.current.value
+                    if self.current.key in self.options:
+                        self.options[self.current.key] += self.current.value
+                    else:
+                        self.options[self.current.key] = self.current.value
+                    
                 self.current = next(self.it)
         
         except StopIteration: # Start from the beginning
