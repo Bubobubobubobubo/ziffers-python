@@ -3,10 +3,11 @@
 # pylint: disable=locally-disabled, no-name-in-module
 import re
 from math import floor
-from .defaults import SCALES, MODIFIERS, NOTE_TO_INTERVAL
+from .defaults import SCALES, MODIFIERS, NOTE_TO_INTERVAL, ROMANS
+
 
 def note_to_midi(name: str) -> int:
-    """ Parse note name to midi
+    """Parse note name to midi
 
     Args:
         name (str): Note name in scientific notation: [a-gA-G][#bs][1-9]
@@ -25,7 +26,7 @@ def note_to_midi(name: str) -> int:
 
 
 def get_scale(name: str) -> list[int]:
-    """ Get a scale from the global scale list
+    """Get a scale from the global scale list
 
     Args:
         name (str): Name of the scale as named in https://allthescales.org/
@@ -36,6 +37,7 @@ def get_scale(name: str) -> list[int]:
     scale = SCALES.get(name.lower().capitalize(), SCALES["Chromatic"])
     return list(map(int, str(scale)))
 
+
 # pylint: disable=locally-disabled, too-many-arguments
 def note_from_pc(
     root: int | str,
@@ -45,7 +47,7 @@ def note_from_pc(
     octave: int = 0,
     modifier: int = 0,
 ) -> int:
-    """ Resolve a pitch class into a note from a scale
+    """Resolve a pitch class into a note from a scale
 
     Args:
         root (int | str): Root of the scale in MIDI or scientific pitch notation
@@ -80,3 +82,18 @@ def note_from_pc(
     note = root + sum(intervals[0:pitch_class])
 
     return note + (octave * sum(intervals)) + modifier
+
+
+def parse_roman(numeral: str):
+    """Parse roman numeral from string"""
+    values = [ROMANS[val] for val in numeral]
+    result = 0
+    i = 0
+    while i < len(values):
+        if i < len(values) - 1 and values[i + 1] > values[i]:
+            result += values[i + 1] - values[i]
+            i += 2
+        else:
+            result += values[i]
+            i += 1
+    return result

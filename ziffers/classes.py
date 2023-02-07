@@ -5,7 +5,6 @@ import operator
 import random
 from .defaults import DEFAULT_OPTIONS
 
-
 @dataclass
 class Meta:
     """Abstract class for all Ziffers items"""
@@ -29,6 +28,7 @@ class Item(Meta):
     """Class for all Ziffers text based items"""
 
     text: str
+
 
 @dataclass
 class Whitespace(Item):
@@ -76,8 +76,8 @@ class Pitch(Event):
     """Class for pitch in time"""
 
     pitch_class: int = field(default=None)
-    duration: float = field(default=None)
     octave: int = field(default=None)
+    note: int = field(default=None)
 
 
 @dataclass
@@ -99,6 +99,14 @@ class Chord(Event):
     """Class for chords"""
 
     pitch_classes: list[Pitch] = field(default=None)
+
+
+@dataclass
+class RomanNumeral(Event):
+    """Class for roman numbers"""
+
+    value: str = field(default=None)
+    chord_type: str = field(default=None)
 
 
 @dataclass
@@ -129,9 +137,9 @@ class Sequence(Meta):
             next_item = self.values[self.local_index]
             self.local_index += 1
             return next_item
-        else:
-            self.local_index = 0
-            raise StopIteration
+
+        self.local_index = 0
+        raise StopIteration
 
     def update_values(self, new_values):
         """Update value attributes from dict"""
@@ -165,7 +173,9 @@ class Ziffers(Sequence):
     options: dict = field(default_factory=DEFAULT_OPTIONS)
     loop_i: int = 0
     iterator: iter = field(default=None, repr=False)
-    current: Whitespace|DurationChange|OctaveChange|OctaveAdd = field(default=None)
+    current: Whitespace | DurationChange | OctaveChange | OctaveAdd = field(
+        default=None
+    )
 
     def __post_init__(self):
         super().__post_init__()
@@ -193,7 +203,7 @@ class Ziffers(Sequence):
         return self.current
 
     def take(self, num: int) -> list[Pitch]:
-        """ Take number of pitch classes from the parsed sequence. Cycles from the beginning.
+        """Take number of pitch classes from the parsed sequence. Cycles from the beginning.
 
         Args:
             num (int): Number of pitch classes to take from the sequence
@@ -204,7 +214,7 @@ class Ziffers(Sequence):
         return list(itertools.islice(itertools.cycle(self), num))
 
     def set_defaults(self, options: dict):
-        """ Sets options for the parser
+        """Sets options for the parser
 
         Args:
             options (dict): Options as a dict
@@ -213,19 +223,21 @@ class Ziffers(Sequence):
 
     # TODO: Refactor these
     def pitch_classes(self) -> list[int]:
-        """ Return list of pitch classes as ints """
+        """Return list of pitch classes as ints"""
         return [val.pitch_class for val in self.values if isinstance(val, Pitch)]
 
     def durations(self) -> list[float]:
-        """ Return list of pitch durations as floats"""
+        """Return list of pitch durations as floats"""
         return [val.dur for val in self.values if isinstance(val, Pitch)]
 
     def pairs(self) -> list[tuple]:
-        """ Return list of pitches and durations """
-        return [(val.pitch_class, val.dur) for val in self.values if isinstance(val, Pitch)]
+        """Return list of pitches and durations"""
+        return [
+            (val.pitch_class, val.dur) for val in self.values if isinstance(val, Pitch)
+        ]
 
     def octaves(self) -> list[int]:
-        """ Return list of octaves """
+        """Return list of octaves"""
         return [val.octave for val in self.values if isinstance(val, Pitch)]
 
 
@@ -258,7 +270,7 @@ class RandomInteger(Item):
             self.max = new_max
 
     def value(self):
-        """ Evaluate the random value for the generator """
+        """Evaluate the random value for the generator"""
         return random.randint(self.min, self.max)
 
 
@@ -292,11 +304,11 @@ class Cyclic(Sequence):
         self.values = [val for val in self.values if isinstance(val, Whitespace)]
 
     def value(self):
-        """ Get the value for the current cycle """
+        """Get the value for the current cycle"""
         return self.values[self.cycle]
 
     def next_cycle(self, cycle: int):
-        """ Evaluate next cycle """
+        """Evaluate next cycle"""
         self.cycle = self.cycle + 1
 
 
@@ -332,7 +344,7 @@ class ListOperation(Sequence):
     """Class for list operations"""
 
     def run(self):
-        """ Run operations """
+        """Run operations"""
         pass
 
 

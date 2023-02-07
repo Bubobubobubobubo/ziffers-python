@@ -1,6 +1,6 @@
     // Root for the rules    
     ?root: sequence -> start
-    sequence: (pitch_class | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
+    sequence: (pitch_class | dur_change | oct_mod | oct_change | WS | chord | named_roman | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
     
     // Pitch classes
     pitch_class: prefix* pitch
@@ -12,6 +12,9 @@
    
     // Chords
     chord: pitch_class pitch_class+
+    named_roman: roman_number (("^" chord_name) | ("+" number))?
+    chord_name: /[a-zA-Z0-9]+/
+    ?roman_number: /iv|v|v?i{1,3}/
   
     // Valid as integer
     ?number: SIGNED_NUMBER | random_integer | cyclic_number

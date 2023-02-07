@@ -1,4 +1,5 @@
 """ Lark transformer for mapping Lark tokens to Ziffers objects """
+from typing import Optional
 from lark import Transformer
 from .classes import (
     Ziffers,
@@ -10,6 +11,7 @@ from .classes import (
     RandomPitch,
     RandomPercent,
     Chord,
+    RomanNumeral,
     Sequence,
     ListSequence,
     RepeatedListSequence,
@@ -28,13 +30,18 @@ from .classes import (
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS
+from .scale import note_from_pc, parse_roman
 
 
 # pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
 class ZiffersTransformer(Transformer):
     """Rules for transforming Ziffers expressions into tree."""
 
-    def start(self, items):
+    def __init__(self, options: Optional[dict]=None):
+        super().__init__()
+        self.options = options
+
+    def start(self, items) -> Ziffers:
         """Root for the rules"""
         seq = Sequence(values=items[0])
         return Ziffers(values=seq, options={})
@@ -43,17 +50,17 @@ class ZiffersTransformer(Transformer):
         """Flatten sequence"""
         return flatten(items)
 
-    def random_integer(self, item):
+    def random_integer(self, item) -> RandomInteger:
         """Parses random integer syntax"""
         val = item[0][1:-1].split(",")
         return RandomInteger(min=val[0], max=val[1], text=item[0].value)
 
-    def range(self, item):
+    def range(self, item) -> Range:
         """Parses range syntax"""
         val = item[0].split("..")
         return Range(start=val[0], end=val[1], text=item[0])
 
-    def cycle(self, items):
+    def cycle(self, items) -> Cyclic:
         """Parses cycle"""
         values = items[0]
         return Cyclic(values=values)
@@ -101,6 +108,22 @@ class ZiffersTransformer(Transformer):
     def chord(self, items):
         """Parses chord"""
         return Chord(pitch_classes=items, text="".join([val.text for val in items]))
+
+    def named_roman(self,items) -> RomanNumeral:
+        """Parse chord from roman numeral"""
+        numeral = items[0].value
+        if len(items)>1:
+            name = items[1]
+            return RomanNumeral(text=numeral, value=parse_roman(numeral), chord_type=name)
+        return RomanNumeral(value=parse_roman(numeral), text=numeral)
+
+    def chord_name(self,item):
+        """Return name for chord"""
+        return item[0].value
+
+    def roman_number(self,item):
+        """Return roman numeral"""
+        return item.value
 
     def dur_change(self, items):
         """Parses duration change"""
