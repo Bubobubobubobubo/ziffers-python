@@ -4,6 +4,7 @@ import itertools
 import operator
 import random
 from .defaults import DEFAULT_OPTIONS
+from .scale import note_from_pc
 
 @dataclass
 class Meta:
@@ -78,6 +79,9 @@ class Pitch(Event):
     pitch_class: int = field(default=None)
     octave: int = field(default=None)
     note: int = field(default=None)
+
+    def set_note(self,note: int):
+        self.note = note
 
 
 @dataclass
@@ -198,7 +202,15 @@ class Ziffers(Sequence):
 
             self.current = next(self.iterator)  # Skip item
 
+        # Update collected options & default options
         self.current.update_new(self.options)
+
+        # Resolve note from scale
+        if set(("key","scale")) <= self.options.keys():
+            if isinstance(self.current,(Pitch,RandomPitch)):
+                note = note_from_pc(self.options["key"],self.current.pitch_class,self.options["scale"])
+                self.current.set_note(note)
+
         self.loop_i += 1
         return self.current
 

@@ -30,7 +30,7 @@ from .classes import (
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS
-from .scale import note_from_pc, parse_roman
+from .scale import parse_roman
 
 
 # pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
