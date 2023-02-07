@@ -1,9 +1,9 @@
     // Root for the rules    
     ?root: sequence -> start
-    sequence: (pc | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
+    sequence: (pitch_class | dur_change | oct_mod | oct_change | WS | chord | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
     
     // Pitch classes
-    pc: prefix* pitch
+    pitch_class: prefix* pitch
     prefix: (octave | duration_chars | escaped_decimal | escaped_octave)
     pitch: /-?[0-9TE]/
     escaped_decimal: "<" decimal ">"
@@ -11,7 +11,7 @@
     octave: /[_^]+/
    
     // Chords
-    chord: pc pc+
+    chord: pitch_class pitch_class+
   
     // Valid as integer
     ?number: SIGNED_NUMBER | random_integer | cyclic_number
@@ -47,7 +47,7 @@
 
     // Subdivision
     subdivision: "[" subitems "]"
-    subitems: (pc | WS | chord | cycle | subdivision)*
+    subitems: (pitch_class | WS | chord | cycle | subdivision)*
 
     // Control characters modifying future events
     oct_mod: octave WS

@@ -1,6 +1,8 @@
 from ziffers import *
 from rich import print
 
+# FIXME: TO BE REMOVED / CHANGED TO TEST?
+
 if __name__ == "__main__":
     expressions = {
         "Pitches": "-2 -1 0 1 2",
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     }
     for ex in expressions:
         try:
-            print(f"Parsed: " + parse_expression(expressions[ex]).text)
+            print("Parsed: " + parse_expression(expressions[ex]).text)
         except Exception as e:
             print(f"[red]Failed on {ex}[/red]")
             # print(f"[red]Failed on {ex}[/red]: {str(e)[0:40]}...")

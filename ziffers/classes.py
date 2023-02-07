@@ -1,9 +1,10 @@
+""" Ziffers classes for the parsed notation """
 from dataclasses import dataclass, field
+import itertools
 import operator
-from typing import Any
 import random
 from .defaults import DEFAULT_OPTIONS
-import itertools
+
 
 @dataclass
 class Meta:
@@ -14,13 +15,14 @@ class Meta:
         for key, value in new_values.items():
             if hasattr(self, key):
                 setattr(self, key, value)
-    
+
     def update_new(self, new_values):
         """Updates new attributes from dict"""
         for key, value in new_values.items():
             if hasattr(self, key):
-                if getattr(self,key) == None:
+                if getattr(self, key) is None:
                     setattr(self, key, value)
+
 
 @dataclass
 class Item(Meta):
@@ -28,12 +30,11 @@ class Item(Meta):
 
     text: str
 
-
 @dataclass
 class Whitespace(Item):
     """Class for whitespace"""
 
-    item_type: str = None
+    item_type: str = field(default=None, repr=False, init=False)
 
 
 @dataclass
@@ -41,89 +42,90 @@ class DurationChange(Item):
     """Class for changing duration"""
 
     value: float
-    key: str = "duration"
-    item_type: str = "change"
+    key: str = field(default="duration", repr=False, init=False)
+    item_type: str = field(default="change", repr=False, init=False)
+
 
 @dataclass
 class OctaveChange(Item):
     """Class for changing octave"""
 
     value: int
-    key: str = "octave"
-    item_type: str = "change"
+    key: str = field(default="octave", repr=False, init=False)
+    item_type: str = field(default="change", repr=False, init=False)
 
 
 @dataclass
-class OctaveMod(Item):
+class OctaveAdd(Item):
     """Class for modifying octave"""
 
     value: int
-    key: str = "octave"
-    item_type: str = "add"
+    key: str = field(default="octave", repr=False, init=False)
+    item_type: str = field(default="add", repr=False, init=False)
+
 
 @dataclass
 class Event(Item):
     """Abstract class for events with duration"""
 
-    duration: float = None
+    duration: float = field(default=None)
 
 
 @dataclass
 class Pitch(Event):
     """Class for pitch in time"""
 
-    pc: int = None
-    duration: float = None
-    octave: int = None
+    pitch_class: int = field(default=None)
+    duration: float = field(default=None)
+    octave: int = field(default=None)
 
 
 @dataclass
 class RandomPitch(Event):
     """Class for random pitch"""
 
-    pc: int = None
+    pitch_class: int = field(default=None)
 
 
 @dataclass
 class RandomPercent(Item):
     """Class for random percent"""
 
-    percent: float = None
+    percent: float = field(default=None)
 
 
 @dataclass
 class Chord(Event):
     """Class for chords"""
 
-    pcs: list[Pitch] = None
+    pitch_classes: list[Pitch] = field(default=None)
 
 
 @dataclass
 class Function(Event):
     """Class for functions"""
 
-    run: str = None
+    run: str = field(default=None)
+
 
 @dataclass
 class Sequence(Meta):
     """Class for sequences of items"""
 
     values: list[Item]
-    text: str = None
+    text: str = field(default=None)
     wrap_start: str = field(default=None, repr=False)
     wrap_end: str = field(default=None, repr=False)
-    local_index: int = 0
+    local_index: int = field(default=0, init=False)
 
     def __post_init__(self):
-        self.text = self.collect_text()
-        # TODO: Filter out whitespace if not needed?
-        # self.values = list(filter(lambda elm: not isinstance(elm, Whitespace), self.values))
+        self.text = self.__collect_text()
 
     def __iter__(self):
         return self
-    
+
     def __next__(self):
-        if self.local_index<len(self.values):
+        if self.local_index < len(self.values):
             next_item = self.values[self.local_index]
             self.local_index += 1
             return next_item
@@ -138,13 +140,94 @@ class Sequence(Meta):
                 if key != "text" and hasattr(obj, key):
                     setattr(obj, key, value)
 
-    def collect_text(self) -> str:
+    def __collect_text(self) -> str:
+        """Collect text value from values"""
         text = "".join([val.text for val in self.values])
-        if self.wrap_start != None:
+        if self.wrap_start is not None:
             text = self.wrap_start + text
-        if self.wrap_end != None:
+        if self.wrap_end is not None:
             text = text + self.wrap_end
         return text
+
+    def flatten_values(self):
+        """Flattens the Ziffers object tree"""
+        for item in self.values:
+            if isinstance(item, Sequence):
+                yield from item.flatten_values()
+            else:
+                yield item
+
+
+@dataclass
+class Ziffers(Sequence):
+    """Main class for holding options and the current state"""
+
+    options: dict = field(default_factory=DEFAULT_OPTIONS)
+    loop_i: int = 0
+    iterator: iter = field(default=None, repr=False)
+    current: Whitespace|DurationChange|OctaveChange|OctaveAdd = field(default=None)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.iterator = self.flatten_values()
+
+    def __next__(self):
+        self.current = next(self.iterator)
+
+        # Skip whitespace and collect duration & octave changes
+        while isinstance(
+            self.current, (Whitespace, DurationChange, OctaveChange, OctaveAdd)
+        ):
+            if self.current.item_type == "change":  # Change options
+                self.options[self.current.key] = self.current.value
+            elif self.current.item_type == "add":
+                if self.current.key in self.options:  # Add to existing value
+                    self.options[self.current.key] += self.current.value
+                else:  # Create value if not existing
+                    self.options[self.current.key] = self.current.value
+
+            self.current = next(self.iterator)  # Skip item
+
+        self.current.update_new(self.options)
+        self.loop_i += 1
+        return self.current
+
+    def take(self, num: int) -> list[Pitch]:
+        """ Take number of pitch classes from the parsed sequence. Cycles from the beginning.
+
+        Args:
+            num (int): Number of pitch classes to take from the sequence
+
+        Returns:
+            list: List of pitch class items
+        """
+        return list(itertools.islice(itertools.cycle(self), num))
+
+    def set_defaults(self, options: dict):
+        """ Sets options for the parser
+
+        Args:
+            options (dict): Options as a dict
+        """
+        self.options = DEFAULT_OPTIONS | options
+
+    # TODO: Refactor these
+    def pitch_classes(self) -> list[int]:
+        """ Return list of pitch classes as ints """
+        return [val.pitch_class for val in self.values if isinstance(val, Pitch)]
+
+    def durations(self) -> list[float]:
+        """ Return list of pitch durations as floats"""
+        return [val.dur for val in self.values if isinstance(val, Pitch)]
+
+    def pairs(self) -> list[tuple]:
+        """ Return list of pitches and durations """
+        return [(val.pitch_class, val.dur) for val in self.values if isinstance(val, Pitch)]
+
+    def octaves(self) -> list[int]:
+        """ Return list of octaves """
+        return [val.octave for val in self.values if isinstance(val, Pitch)]
+
 
 @dataclass
 class ListSequence(Sequence):
@@ -155,10 +238,35 @@ class ListSequence(Sequence):
 
 
 @dataclass
+class Integer(Item):
+    """Class for integers"""
+
+    value: int
+
+
+@dataclass
+class RandomInteger(Item):
+    """Class for random integer"""
+
+    min: int
+    max: int
+
+    def __post_init__(self):
+        if self.min > self.max:
+            new_max = self.min
+            self.min = self.max
+            self.max = new_max
+
+    def value(self):
+        """ Evaluate the random value for the generator """
+        return random.randint(self.min, self.max)
+
+
+@dataclass
 class RepeatedListSequence(Sequence):
     """Class for Ziffers list sequences"""
 
-    repeats: Item = None
+    repeats: RandomInteger | Integer = field(default_factory=Integer(value=1, text="1"))
     wrap_start: str = field(default="(:", repr=False)
     wrap_end: str = field(default=":)", repr=False)
 
@@ -181,38 +289,23 @@ class Cyclic(Sequence):
     def __post_init__(self):
         super().__post_init__()
         # TODO: Do spaced need to be filtered out?
-        self.values = [val for val in self.values if isinstance(val,Whitespace)]
+        self.values = [val for val in self.values if isinstance(val, Whitespace)]
 
     def value(self):
+        """ Get the value for the current cycle """
         return self.values[self.cycle]
 
     def next_cycle(self, cycle: int):
-        self.cycle = self.cycle+1
-
-
-@dataclass
-class RandomInteger(Item):
-    """Class for random integer"""
-
-    min: int
-    max: int
-
-    def __post_init__(self):
-        if self.min>self.max:
-            new_max = self.min
-            self.min = self.max
-            self.max = new_max
-
-    def value(self):
-        return random.randint(self.min,self.max)
+        """ Evaluate next cycle """
+        self.cycle = self.cycle + 1
 
 
 @dataclass
 class Range(Item):
     """Class for range"""
 
-    start: int = None
-    end: int = None
+    start: int = field(default=None)
+    end: int = field(default=None)
 
 
 ops = {
@@ -239,6 +332,7 @@ class ListOperation(Sequence):
     """Class for list operations"""
 
     def run(self):
+        """ Run operations """
         pass
 
 
@@ -271,83 +365,20 @@ class Atom(Item):
 
 
 @dataclass
-class Integer(Item):
-    """Class for integers"""
-
-    value: int
-
-
-@dataclass
 class Euclid(Item):
     """Class for euclidean cycles"""
 
     pulses: int
     length: int
     onset: list
-    offset: list = None
-    rotate: int = None
+    offset: list = field(default=None)
+    rotate: int = field(default=None)
 
 
 @dataclass
 class RepeatedSequence(Sequence):
     """Class for repeats"""
 
-    repeats: Item = None
+    repeats: RandomInteger | Integer = field(default_factory=Integer(value=1, text="1"))
     wrap_start: str = field(default="[:", repr=False)
     wrap_end: str = field(default=":]", repr=False)
-
-@dataclass
-class Ziffers(Sequence):
-    """Main class for holding options and the current state"""
-
-    options: dict  = field(default_factory=DEFAULT_OPTIONS)
-    loop_i: int = 0
-    current: Item = None
-    it: iter = None
-
-    def __post_init__(self):
-        super().__post_init__()
-        self.it = iter(self.values)
-    
-    def __next__(self):
-        try:
-            self.current = next(self.it)
-
-            # Skip whitespace and collect duration & octave changes  
-            while isinstance(self.current,(Whitespace,DurationChange,OctaveChange,OctaveMod)):
-                if self.current.item_type == "change":
-                    self.options[self.current.key] = self.current.value
-                elif self.current.item_type == "add":
-                    if self.current.key in self.options:
-                        self.options[self.current.key] += self.current.value
-                    else:
-                        self.options[self.current.key] = self.current.value
-                    
-                self.current = next(self.it)
-        
-        except StopIteration: # Start from the beginning
-            self.current = next(self.it)
-        
-        self.current.update_new(self.options)        
-        
-        self.loop_i += 1
-        return self.current
-
-    def take(self,num: int) -> list:
-        return list(itertools.islice(iter(self), num))
-
-    def set_defaults(self,options: dict):
-        self.options = DEFAULT_OPTIONS | options
-
-    # TODO: Handle options and generated values
-    def pcs(self) -> list[int]:
-        return [val.pc for val in self.values if isinstance(val,Pitch)]
-
-    def durations(self) -> list[float]:
-        return [val.dur for val in self.values if isinstance(val,Pitch)]
-
-    def pairs(self) -> list[tuple]:
-        return [(val.pc,val.dur) for val in self.values if isinstance(val,Pitch)]
-
-    def octaves(self) -> list[int]:
-        return [val.octave for val in self.values if isinstance(val,Pitch)]

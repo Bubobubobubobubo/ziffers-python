@@ -1,3 +1,4 @@
+""" Tests for the scale module """
 from ziffers import scale
 import pytest
 

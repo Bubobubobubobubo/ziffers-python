@@ -1,3 +1,4 @@
+""" Common methods used in parsing """
 def flatten(arr: list) -> list:
     """Flattens array"""
     return (

@@ -1,10 +1,11 @@
+""" Lark transformer for mapping Lark tokens to Ziffers objects """
 from lark import Transformer
 from .classes import (
     Ziffers,
     Whitespace,
     DurationChange,
     OctaveChange,
-    OctaveMod,
+    OctaveAdd,
     Pitch,
     RandomPitch,
     RandomPercent,
@@ -25,157 +26,185 @@ from .classes import (
     Euclid,
     RepeatedSequence,
 )
-from .common import (
-    flatten,
-    sum_dict
-)
+from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS
 
 
+# pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
 class ZiffersTransformer(Transformer):
-
-    """
-    Rules for transforming Ziffers expressions into tree.
-    """
+    """Rules for transforming Ziffers expressions into tree."""
 
     def start(self, items):
+        """Root for the rules"""
         seq = Sequence(values=items[0])
-        return Ziffers(values=seq,options={})
+        return Ziffers(values=seq, options={})
 
     def sequence(self, items):
+        """Flatten sequence"""
         return flatten(items)
 
-    def random_integer(self, s):
-        val = s[0][1:-1].split(",")
-        return RandomInteger(min=val[0], max=val[1], text=s[0].value)
+    def random_integer(self, item):
+        """Parses random integer syntax"""
+        val = item[0][1:-1].split(",")
+        return RandomInteger(min=val[0], max=val[1], text=item[0].value)
 
-    def range(self, s):
-        val = s[0].split("..")
-        return Range(start=val[0], end=val[1], text=s[0])
+    def range(self, item):
+        """Parses range syntax"""
+        val = item[0].split("..")
+        return Range(start=val[0], end=val[1], text=item[0])
 
     def cycle(self, items):
+        """Parses cycle"""
         values = items[0]
         return Cyclic(values=values)
 
-    def pc(self, s):
-        if len(s) > 1:
+    def pitch_class(self, item):
+        """Parses pitch class"""
+
+        # If there are prefixes
+        if len(item) > 1:
             # Collect&sum prefixes from any order: _qee^s4 etc.
-            result = sum_dict(s)
+            result = sum_dict(item)
             return Pitch(**result)
-        else:
-            val = s[0]
-            return Pitch(**val)
 
-    def pitch(self, s):
-        return {"pc": int(s[0].value), "text": s[0].value}
+        val = item[0]
+        return Pitch(**val)
 
-    def prefix(self, s):
-        return s[0]
+    def pitch(self, items):
+        """Return pitch class info"""
+        return {"pitch_class": int(items[0].value), "text": items[0].value}
 
-    def oct_change(self, s):
-        octave = s[0]
-        return [OctaveChange(value=octave["octave"], text=octave["text"]), s[1]]
+    def prefix(self, items):
+        """Return prefix"""
+        return items[0]
 
-    def oct_mod(self, s):
-        octave = s[0]
-        return [OctaveMod(value=octave["octave"], text=octave["text"]), s[1]]
+    def oct_change(self, items):
+        """Parses octave change"""
+        octave = items[0]
+        return [OctaveChange(value=octave["octave"], text=octave["text"]), items[1]]
 
-    def escaped_octave(self, s):
-        value = s[0][1:-1]
-        return {"octave": int(value), "text": s[0].value}
+    def oct_mod(self, items):
+        """Parses octave modification"""
+        octave = items[0]
+        return [OctaveAdd(value=octave["octave"], text=octave["text"]), items[1]]
 
-    def octave(self, s):
-        value = sum([1 if char == "^" else -1 for char in s[0].value])
-        return {"octave": value, "text": s[0].value}
+    def escaped_octave(self, items):
+        """Return octave info"""
+        value = items[0][1:-1]
+        return {"octave": int(value), "text": items[0].value}
 
-    def chord(self, s):
-        return Chord(pcs=s, text="".join([val.text for val in s]))
+    def octave(self, items):
+        """Return octave info"""
+        value = sum(1 if char == "^" else -1 for char in items[0].value)
+        return {"octave": value, "text": items[0].value}
 
-    def dur_change(self, s):
-        durs = s[0]
-        return DurationChange(value=durs[1], text=durs[0])
+    def chord(self, items):
+        """Parses chord"""
+        return Chord(pitch_classes=items, text="".join([val.text for val in items]))
 
-    def char_change(self, s):
+    def dur_change(self, items):
+        """Parses duration change"""
+        durs = items[0]
+        return DurationChange(value=durs["duration"], text=durs["text"])
+
+    def char_change(self, items):
+        """Return partial duration char info"""
         chars = ""
         durs = 0.0
-        for (dchar, dots) in s:
+        for dchar, dots in items:
             val = DEFAULT_DURS[dchar]
             if dots > 0:
                 val = val * (2.0 - (1.0 / (2 * dots)))
             chars = chars + (dchar + "." * dots)
             durs = durs + val
-        return [chars, durs]
+        return {"text":chars, "duration":durs}
 
-    def dchar_not_prefix(self, s):
-        dur = s[0].split(".", 1)
+    def dchar_not_prefix(self, items):
+        """Return partial duration char info"""
+        dur = items[0].split(".", 1)
         dots = 0
         if len(dur) > 1:
             dots = len(dur[1]) + 1
         return [dur[0], dots]
 
-    def escaped_decimal(self, s):
-        val = s[0]
+    def escaped_decimal(self, items):
+        """Return partial decimal info"""
+        val = items[0]
         val["text"] = "<" + val["text"] + ">"
         return val
 
-    def random_pitch(self, s):
+    def random_pitch(self, items):
+        """Parses random pitch"""
         return RandomPitch(text="?")
 
-    def random_percent(self, s):
+    def random_percent(self, items):
+        """Parses random percent"""
         return RandomPercent(text="%")
 
-    def duration_chars(self, s):
-        durations = [val[1] for val in s]
-        characters = "".join([val[0] for val in s])
+    def duration_chars(self, items):
+        """Return partial duration info"""
+        durations = [val[1] for val in items]
+        characters = "".join([val[0] for val in items])
         return {"duration": sum(durations), "text": characters}
 
-    def dotted_dur(self, s):
-        key = s[0]
+    def dotted_dur(self, items):
+        """Return partial duration info"""
+        key = items[0]
         val = DEFAULT_DURS[key]
-        dots = len(s) - 1
+        dots = len(items) - 1
         if dots > 0:
             val = val * (2.0 - (1.0 / (2 * dots)))
         return [key + "." * dots, val]
 
-    def decimal(self, s):
-        val = s[0]
+    def decimal(self, items):
+        """Return partial duration info"""
+        val = items[0]
         return {"duration": float(val), "text": val.value}
 
-    def dot(self, s):
+    def dot(self, items):
+        """Return partial duration info"""
         return "."
 
-    def dchar(self, s):
-        chardur = s[0].value
+    def dchar(self, items):
+        """Return partial duration info"""
+        chardur = items[0].value
         return chardur
 
-    def WS(self, s):
-        return Whitespace(text=s[0])
+    def WS(self, items):
+        """Parse whitespace"""
+        return Whitespace(text=items[0])
 
     def subdivision(self, items):
+        """Parse subdivision"""
         values = flatten(items[0])
         return Subdivision(
             values=values, text="[" + "".join([val.text for val in values]) + "]"
         )
 
-    def subitems(self, s):
-        return s
+    def subitems(self, items):
+        """Return subdivision items"""
+        return items
 
     # Eval rules
 
-    def eval(self, s):
-        val = s[0]
+    def eval(self, items):
+        """Parse eval"""
+        val = items[0]
         return Eval(values=val)
 
-    def operation(self, s):
-        return s
+    def operation(self, items):
+        """Return partial eval operations"""
+        return items
 
-    def atom(self, s):
-        val = s[0].value
+    def atom(self, token):
+        """Return partial eval item"""
+        val = token[0].value
         return Atom(value=val, text=val)
 
     # List rules
 
     def list(self, items):
+        """Parse list sequence notation, ex: (1 2 3)"""
         if len(items) > 1:
             prefixes = sum_dict(items[0:-1])
             values = items[-1]
@@ -187,9 +216,10 @@ class ZiffersTransformer(Transformer):
             return seq
 
     def repeated_list(self, items):
+        """Parse repeated list notation ex: (: 1 2 3 :)"""
         if len(items) > 2:
             prefixes = sum_dict(items[0:-2])  # If there are prefixes
-            if items[-1] != None:
+            if items[-1] is not None:
                 seq = RepeatedListSequence(
                     values=items[-2],
                     repeats=items[-1],
@@ -202,7 +232,7 @@ class ZiffersTransformer(Transformer):
             seq.update_values(prefixes)
             return seq
         else:
-            if items[-1] != None:
+            if items[-1] is not None:
                 seq = RepeatedListSequence(
                     values=items[-2],
                     repeats=items[-1],
@@ -214,54 +244,64 @@ class ZiffersTransformer(Transformer):
                 )
             return seq
 
-    def SIGNED_NUMBER(self, s):
-        val = s.value
+    def SIGNED_NUMBER(self, token):
+        """Parse integer"""
+        val = token.value
         return Integer(text=val, value=int(val))
 
-    def number(self, s):
-        return s
+    def number(self, item):
+        """Return partial number (Integer or RandomInteger)"""
+        return item
 
-    def cyclic_number(self, s):
-        return Cyclic(values=s)
+    def cyclic_number(self, item):
+        """Parse cyclic notation"""
+        return Cyclic(values=item)
 
-    def lisp_operation(self, s):
-        op = s[0]
-        values = s[1:]
+    def lisp_operation(self, items):
+        """Parse lisp like list operation"""
+        op = items[0]
+        values = items[1:]
         return Operation(
             operator=op,
             values=values,
             text="(+" + "".join([v.text for v in values]) + ")",
         )
 
-    def operator(self, s):
-        val = s[0].value
+    def operator(self, token):
+        """Parse operator"""
+        val = token[0].value
         return Operator(text=val)
 
-    def list_items(self, s):
-        return Sequence(values=s)
+    def list_items(self, items):
+        """Parse sequence"""
+        return Sequence(values=items)
 
-    def list_op(self, s):
-        return ListOperation(values=s)
+    def list_op(self, items):
+        """Parse list operation"""
+        return ListOperation(values=items)
 
-    def euclid(self, s):
-        params = s[1][1:-1].split(",")
-        init = {"onset": s[0], "pulses": params[0], "length": params[1]}
-        text = s[0].text + s[1]
+    def euclid(self, items):
+        """Parse euclid notation"""
+        params = items[1][1:-1].split(",")
+        init = {"onset": items[0], "pulses": params[0], "length": params[1]}
+        text = items[0].text + items[1]
         if len(params) > 2:
             init["rotate"] = params[2]
-        if len(s) > 2:
-            init["offset"] = s[2]
-            text = text + s[2].text
+        if len(items) > 2:
+            init["offset"] = items[2]
+            text = text + items[2].text
         init["text"] = text
         return Euclid(**init)
 
-    def euclid_operator(self, s):
-        return s.value
+    def euclid_operator(self, token):
+        """Return euclid operators"""
+        return token.value
 
-    def repeat(self, s):
-        if s[-1] != None:
+    def repeat(self, items):
+        """Parse repeated sequence, ex: [: 1 2 3 :]"""
+        if items[-1] is not None:
             return RepeatedSequence(
-                values=s[0], repeats=s[-1], wrap_end=":" + s[-1].text + "]"
+                values=items[0], repeats=items[-1], wrap_end=":" + items[-1].text + "]"
             )
         else:
-            return RepeatedSequence(values=s[0], repeats=Integer(value=1, text="1"))
+            return RepeatedSequence(values=items[0], repeats=Integer(value=1, text="1"))

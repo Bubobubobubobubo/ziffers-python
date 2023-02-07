@@ -1,5 +1,6 @@
-from ziffers import *
+""" Test cases for the parser """
 import pytest
+from ziffers import parse_expression
 
 
 def test_can_parse():
