@@ -112,6 +112,7 @@ class Chord(Event):
         """Set notes to the class"""
         self.notes = notes
 
+
 @dataclass
 class RomanNumeral(Event):
     """Class for roman numbers"""
@@ -228,16 +229,24 @@ class Ziffers(Sequence):
             key = self.options["key"]
             scale = self.options["scale"]
             if isinstance(self.current, (Pitch, RandomPitch)):
-                note = note_from_pc(root=key,pitch_class=self.current.pitch_class,intervals=scale,modifier=self.current.modifier)
+                note = note_from_pc(
+                    root=key,
+                    pitch_class=self.current.pitch_class,
+                    intervals=scale,
+                    modifier=self.current.modifier,
+                )
                 self.current.set_note(note)
-            elif isinstance(self.current,Chord):
+            elif isinstance(self.current, Chord):
                 pcs = self.current.pitch_classes
-                notes = [pc.set_note(note_from_pc(key, pc.pitch_class, scale)) for pc in pcs]
+                notes = [
+                    pc.set_note(note_from_pc(key, pc.pitch_class, scale)) for pc in pcs
+                ]
                 self.current.set_notes(notes)
-            elif isinstance(self.current,RomanNumeral):
-                pitch_classes = [midi_to_pitch_class(note, key, scale) for note in self.current.notes]
+            elif isinstance(self.current, RomanNumeral):
+                pitch_classes = [
+                    midi_to_pitch_class(note, key, scale) for note in self.current.notes
+                ]
                 self.current.set_pitch_classes(pitch_classes)
-
 
         self.loop_i += 1
         return self.current
@@ -342,13 +351,13 @@ class Cyclic(Sequence):
     wrap_end: str = field(default=">", repr=False)
 
     def __next__(self):
-        yield self.values[self.cycle%len(self.cycle)]
-        self.cycle+=1
+        yield self.values[self.cycle % len(self.cycle)]
+        self.cycle += 1
         raise StopIteration
 
     def value(self):
         """Get the value for the current cycle"""
-        return self.values[self.cycle%len(self.cycle)]
+        return self.values[self.cycle % len(self.cycle)]
 
 
 @dataclass

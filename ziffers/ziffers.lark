@@ -18,7 +18,7 @@
     ?roman_number: /iv|v|v?i{1,3}/
   
     // Valid as integer
-    ?number: SIGNED_NUMBER | random_integer | cyclic_number
+    ?number: NUMBER | random_integer | cyclic_number
     cyclic_number: "<" number (WS number)* ">"
 
     // Repeats
@@ -69,11 +69,12 @@
 
     // Rules for evaluating clauses inside {}
     // TODO: Support for parenthesis?
-    eval: "{" operation "}"
-    operation: atom (operator atom)+  
-    atom: (number | DECIMAL)
+    eval: "{" operation+ "}"
+    operation: atom (operator (sub_operations | operation))*
+    sub_operations: "(" operation ")"
+    atom: (NUMBER | DECIMAL)
 
     %import common.NUMBER
-    %import common.SIGNED_NUMBER
+    //%import common.SIGNED_NUMBER
     %import common.DECIMAL
     %import common.WS

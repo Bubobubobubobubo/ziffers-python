@@ -37,7 +37,7 @@ from .scale import parse_roman, chord_from_roman_numeral
 class ZiffersTransformer(Transformer):
     """Rules for transforming Ziffers expressions into tree."""
 
-    def __init__(self, options: Optional[dict]=None):
+    def __init__(self, options: Optional[dict] = None):
         super().__init__()
         self.options = options
 
@@ -114,21 +114,27 @@ class ZiffersTransformer(Transformer):
         """Parses chord"""
         return Chord(pitch_classes=items, text="".join([val.text for val in items]))
 
-    def named_roman(self,items) -> RomanNumeral:
+    def named_roman(self, items) -> RomanNumeral:
         """Parse chord from roman numeral"""
         numeral = items[0].value
-        if len(items)>1:
+        if len(items) > 1:
             name = items[1]
-            chord_notes = chord_from_roman_numeral(numeral,name)
+            chord_notes = chord_from_roman_numeral(numeral, name)
             parsed_number = parse_roman(numeral)
-            return RomanNumeral(text=numeral, value=parsed_number, chord_type=name, notes=chord_notes)
-        return RomanNumeral(value=parse_roman(numeral), text=numeral, notes=chord_from_roman_numeral(numeral))
+            return RomanNumeral(
+                text=numeral, value=parsed_number, chord_type=name, notes=chord_notes
+            )
+        return RomanNumeral(
+            value=parse_roman(numeral),
+            text=numeral,
+            notes=chord_from_roman_numeral(numeral),
+        )
 
-    def chord_name(self,item):
+    def chord_name(self, item):
         """Return name for chord"""
         return item[0].value
 
-    def roman_number(self,item):
+    def roman_number(self, item):
         """Return roman numeral"""
         return item.value
 
@@ -147,7 +153,7 @@ class ZiffersTransformer(Transformer):
                 val = val * (2.0 - (1.0 / (2 * dots)))
             chars = chars + (dchar + "." * dots)
             durs = durs + val
-        return {"text":chars, "duration":durs}
+        return {"text": chars, "duration": durs}
 
     def dchar_not_prefix(self, items):
         """Return partial duration char info"""
@@ -222,9 +228,13 @@ class ZiffersTransformer(Transformer):
         val = items[0]
         return Eval(values=val)
 
+    def sub_operations(self, items):
+        """Returns list of operations"""
+        return Eval(values=items[0], wrap_start="(", wrap_end=")")
+
     def operation(self, items):
         """Return partial eval operations"""
-        return items
+        return flatten(items)
 
     def atom(self, token):
         """Return partial eval item"""
