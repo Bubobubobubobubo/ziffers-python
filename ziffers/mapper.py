@@ -101,9 +101,14 @@ class ZiffersTransformer(Transformer):
         return {"octave": int(value), "text": items[0].value}
 
     def octave(self, items):
-        """Return octave info"""
+        """Return octaves ^ and _"""
         value = sum(1 if char == "^" else -1 for char in items[0].value)
         return {"octave": value, "text": items[0].value}
+
+    def modifier(self, items):
+        """Return modifiers # and b"""
+        value = 1 if items[0].value == "#" else -1
+        return {"modifier": value}
 
     def chord(self, items):
         """Parses chord"""

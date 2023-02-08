@@ -4,11 +4,12 @@
     
     // Pitch classes
     pitch_class: prefix* pitch
-    prefix: (octave | duration_chars | escaped_decimal | escaped_octave)
+    prefix: (octave | duration_chars | escaped_decimal | escaped_octave | modifier)
     pitch: /-?[0-9TE]/
     escaped_decimal: "<" decimal ">"
     escaped_octave: /<-?[0-9]>/
     octave: /[_^]+/
+    modifier: /[#b]/
    
     // Chords
     chord: pitch_class pitch_class+

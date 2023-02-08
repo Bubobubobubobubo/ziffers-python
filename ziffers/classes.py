@@ -79,7 +79,7 @@ class Pitch(Event):
 
     pitch_class: int = field(default=None)
     octave: int = field(default=None)
-    modifier: int = field(default=None)
+    modifier: int = field(default=0)
     note: int = field(default=None)
 
     def set_note(self, note: int):
@@ -228,7 +228,7 @@ class Ziffers(Sequence):
             key = self.options["key"]
             scale = self.options["scale"]
             if isinstance(self.current, (Pitch, RandomPitch)):
-                note = note_from_pc(key,self.current.pitch_class,scale)
+                note = note_from_pc(root=key,pitch_class=self.current.pitch_class,intervals=scale,modifier=self.current.modifier)
                 self.current.set_note(note)
             elif isinstance(self.current,Chord):
                 pcs = self.current.pitch_classes
@@ -341,18 +341,14 @@ class Cyclic(Sequence):
     wrap_start: str = field(default="<", repr=False)
     wrap_end: str = field(default=">", repr=False)
 
-    def __post_init__(self):
-        super().__post_init__()
-        # TODO: Do spaced need to be filtered out?
-        self.values = [val for val in self.values if isinstance(val, Whitespace)]
+    def __next__(self):
+        yield self.values[self.cycle%len(self.cycle)]
+        self.cycle+=1
+        raise StopIteration
 
     def value(self):
         """Get the value for the current cycle"""
-        return self.values[self.cycle]
-
-    def next_cycle(self, cycle: int):
-        """Evaluate next cycle"""
-        self.cycle = self.cycle + 1
+        return self.values[self.cycle%len(self.cycle)]
 
 
 @dataclass
