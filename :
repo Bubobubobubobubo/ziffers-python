@@ -2,7 +2,7 @@
 # pylint: disable=locally-disabled, redefined-builtin, broad-except
 
 from rich import print
-from ziffers import parse_expression
+from ziffers import parse_expression, zparse
 import readline
 
 EXIT_CONDITION = ("exit", "quit", "")
