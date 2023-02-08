@@ -3,10 +3,49 @@
 # pylint: disable=locally-disabled, no-name-in-module
 import re
 from math import floor
-from .defaults import SCALES, MODIFIERS, NOTE_TO_INTERVAL, ROMANS
+from .defaults import (
+    DEFAULT_OCTAVE,
+    SCALES,
+    MODIFIERS,
+    NOTES_TO_INTERVALS,
+    INTERVALS_TO_NOTES,
+    ROMANS,
+    CIRCLE_OF_FIFTHS,
+    CHORDS,
+)
 
 
-def note_to_midi(name: str) -> int:
+def midi_to_note_name(midi: int) -> str:
+    """Creates note name from midi number
+
+    Args:
+        midi (int): Mii number
+
+    Returns:
+        str: Note name
+    """
+    return INTERVALS_TO_NOTES[midi % 12]
+
+
+def note_name_to_interval(name: str) -> int:
+    """Parse note name to interval
+
+    Args:
+        name (str): Note name as: [a-gA-G][#bs]
+
+    Returns:
+        int: Interval of the note name [-1 - 11]
+    """
+    items = re.match(r"^([a-gA-G])([#bs])?$", name)
+    if items is None:
+        return 0
+    values = items.groups()
+    modifier = MODIFIERS[values[1]] if values[1] else 0
+    interval = NOTES_TO_INTERVALS[values[0].capitalize()]
+    return interval + modifier
+
+
+def note_name_to_midi(name: str) -> int:
     """Parse note name to midi
 
     Args:
@@ -21,7 +60,7 @@ def note_to_midi(name: str) -> int:
     values = items.groups()
     octave = int(values[2]) if values[2] else 4
     modifier = MODIFIERS[values[1]] if values[1] else 0
-    interval = NOTE_TO_INTERVAL[values[0].capitalize()]
+    interval = NOTES_TO_INTERVALS[values[0].capitalize()]
     return 12 + octave * 12 + interval + modifier
 
 
@@ -62,7 +101,7 @@ def note_from_pc(
     """
 
     # Initialization
-    root = note_to_midi(root) if isinstance(root, str) else root
+    root = note_name_to_midi(root) if isinstance(root, str) else root
     intervals = get_scale(intervals) if isinstance(intervals, str) else intervals
     intervals = list(map(lambda x: x / 100), intervals) if cents else intervals
     scale_length = len(intervals)
@@ -84,8 +123,15 @@ def note_from_pc(
     return note + (octave * sum(intervals)) + modifier
 
 
-def parse_roman(numeral: str):
-    """Parse roman numeral from string"""
+def parse_roman(numeral: str) -> int:
+    """Parse roman numeral from string
+
+    Args:
+        numeral (str): Roman numeral as string
+
+    Returns:
+        int: Integer parsed from roman numeral
+    """
     values = [ROMANS[val] for val in numeral]
     result = 0
     i = 0
@@ -97,3 +143,122 @@ def parse_roman(numeral: str):
             result += values[i]
             i += 1
     return result
+
+
+def accidentals_from_note_name(name: str) -> int:
+    """Generates number of accidentals from name of the note.
+
+    Args:
+        name (str): Name of the note
+
+    Returns:
+        int: Integer representing number of flats or sharps: -7 flat to 7 sharp.
+    """
+    idx = CIRCLE_OF_FIFTHS.index(name.upper())
+    return idx - 6
+
+
+def accidentals_from_midi_note(note: int) -> int:
+    """Generates number of accidentals from name of the note.
+
+    Args:
+        note (int): Note as midi number
+
+    Returns:
+        int: Integer representing number of flats or sharps: -7 flat to 7 sharp.
+    """
+    name = midi_to_note_name(note)
+    return accidentals_from_note_name(name)
+
+
+def midi_to_tpc(note: int, key: str | int):
+    """Return Tonal Pitch Class value for the note
+
+    Args:
+        note (int): MIDI note
+        key (str | int): Key as a string (A-G) or a MIDI note.
+
+    Returns:
+        _type_: Tonal Pitch Class value for the note
+    """
+    if isinstance(key, str):
+        acc = accidentals_from_note_name(key)
+    else:
+        acc = accidentals_from_midi_note(key)
+    return (note * 7 + 26 - (11 + acc)) % 12 + (11 + acc)
+
+
+def midi_to_pitch_class(note: int) -> int:
+    """Return pitch class from midi
+
+    Args:
+        note (int): Note in midi
+
+    Returns:
+        int: Returns note % 12
+    """
+    return note % 12
+
+
+def midi_to_octave(note: int) -> int:
+    """Return octave for the midi note
+
+    Args:
+        note (int): Note in midi
+
+    Returns:
+        int: Returns default octave in Ziffers where C4 is in octave 0
+    """
+    return 0 if note <= 0 else floor(note / 12)
+
+
+def midi_to_pc(note: int, key: str | int, scale: str) -> tuple:
+    """Return pitch class and octave from given midi note, key and scale
+
+    Args:
+        note (int): Note as MIDI number
+        key (str | int): Used key
+        scale (str): Used scale
+
+    Returns:
+        tuple: Returns tuple containing (pitch class as string, pitch class, octave, optional modifier)
+    """
+    sharps = ["0", "#0", "1", "#1", "2", "3", "#3", "4", "#4", "5", "#5", "6"]
+    flats = ["0", "b1", "1", "b2", "2", "3", "b4", "4", "b5", "5", "b6", "6"]
+    tpc = midi_to_tpc(note, key)
+    pitch_class = midi_to_pitch_class(note)
+    octave = midi_to_octave(note) - 5
+    if scale.upper() == "CHROMATIC":
+        return (str(pitch_class), pitch_class, octave)
+    if tpc >= 6 and tpc <= 12 and len(flats[pitch_class]) == 2:
+        npc = flats[pitch_class]
+    elif tpc >= 20 and tpc <= 26 and len(sharps[pitch_class]) == 2:
+        npc = sharps[pitch_class]
+    else:
+        npc = sharps[pitch_class]
+
+    if len(npc) > 1:
+        return (npc, int(npc[1]), octave, 1 if (npc[0] == "#") else -1)
+
+    return (npc, int(npc), octave)
+
+
+def chord_from_roman_numeral(roman: str, name: str = "major", num_octaves: int = 1) -> list[int]:
+    """Generates chord from given roman numeral and chord name
+
+    Args:
+        roman (str): Roman numeral
+        name (str, optional): Chord name. Defaults to "major".
+        num_octaves (int, optional): Number of octaves for the chord. Defaults to 1.
+
+    Returns:
+        list[int]: _description_
+    """
+    root = parse_roman(roman) - 1
+    tonic = (DEFAULT_OCTAVE * 12) + root + 12
+    intervals = CHORDS.get(name,CHORDS["major"])
+    notes = []
+    for cur_oct in range(num_octaves):
+        for iterval in intervals:
+            notes.append(tonic + iterval + (cur_oct * 12))
+    return notes

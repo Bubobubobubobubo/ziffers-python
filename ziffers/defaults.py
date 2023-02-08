@@ -38,12 +38,41 @@ DEFAULT_DURS = {
     "z": 0.0,  # 0
 }
 
-DEFAULT_OPTIONS = {
-  "octave": 0,
-  "duration": 0.25
+DEFAULT_OCTAVE = 4
+
+DEFAULT_OPTIONS = {"octave": 0, "duration": 0.25}
+
+NOTES_TO_INTERVALS = {
+ 'C': 0,
+ 'Cs': 1,
+ 'D': 2,
+ 'Eb': 3,
+ 'E': 4,
+ 'F': 5,
+ 'Fs': 6,
+ 'G': 7,
+ 'Ab': 8,
+ 'A': 9,
+ 'Bb': 10,
+ 'B': 11
+ }
+
+INTERVALS_TO_NOTES = {
+    0: 'C',
+    1: 'Cs',
+    2: 'D',
+    3: 'Eb',
+    4: 'E',
+    5: 'F',
+    6: 'Fs',
+    7: 'G',
+    8: 'Ab',
+    9: 'A',
+    10: 'Bb',
+    11: 'B'
 }
 
-NOTE_TO_INTERVAL = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+CIRCLE_OF_FIFTHS = ['Gb', 'Cs', 'Ab', 'Eb', 'Bb', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'Fs']
 
 MODIFIERS = {
     "#": 1,
@@ -51,15 +80,7 @@ MODIFIERS = {
     "s": 1,
 }
 
-ROMANS = {
-      'i': 1,
-      'v': 5,
-      'x': 10,
-      'l': 50,
-      'c': 100,
-      'd': 500,
-      'm': 1000
-    }
+ROMANS = {"i": 1, "v": 5, "x": 10, "l": 50, "c": 100, "d": 500, "m": 1000}
 
 # pylint: disable=locally-disabled, too-many-lines
 
@@ -1555,3 +1576,90 @@ SCALES = {
     "Thydatic": 12111111111,
     "Chromatic": 111111111111,
 }
+
+def __build_chords():
+    major = [0, 4, 7]
+    minor = [0, 3, 7]
+    major7 = [0, 4, 7, 11]
+    dom7 = [0, 4, 7, 10]
+    minor7 = [0, 3, 7, 10]
+    aug = [0, 4, 8]
+    dim = [0, 3, 6]
+    dim7 = [0, 3, 6, 9]
+    halfdim = [0, 3, 6, 10]
+    all_chords = {
+        "1": [0],
+        "5": [0, 7],
+        "+5": [0, 4, 8],
+        "m+5": [0, 3, 8],
+        "sus2": [0, 2, 7],
+        "sus4": [0, 5, 7],
+        "6": [0, 4, 7, 9],
+        "m6": [0, 3, 7, 9],
+        "7sus2": [0, 2, 7, 10],
+        "7sus4": [0, 5, 7, 10],
+        "7-5": [0, 4, 6, 10],
+        "7+5": [0, 4, 8, 10],
+        "m7+5": [0, 3, 8, 10],
+        "9": [0, 4, 7, 10, 14],
+        "m9": [0, 3, 7, 10, 14],
+        "m7+9": [0, 3, 7, 10, 14],
+        "maj9": [0, 4, 7, 11, 14],
+        "9sus4": [0, 5, 7, 10, 14],
+        "6*9": [0, 4, 7, 9, 14],
+        "m6*9": [0, 3, 7, 9, 14],
+        "7-9": [0, 4, 7, 10, 13],
+        "m7-9": [0, 3, 7, 10, 13],
+        "7-10": [0, 4, 7, 10, 15],
+        "7-11": [0, 4, 7, 10, 16],
+        "7-13": [0, 4, 7, 10, 20],
+        "9+5": [0, 10, 13],
+        "m9+5": [0, 10, 14],
+        "7+5-9": [0, 4, 8, 10, 13],
+        "m7+5-9": [0, 3, 8, 10, 13],
+        "11": [0, 4, 7, 10, 14, 17],
+        "m11": [0, 3, 7, 10, 14, 17],
+        "maj11": [0, 4, 7, 11, 14, 17],
+        "11+": [0, 4, 7, 10, 14, 18],
+        "m11+": [0, 3, 7, 10, 14, 18],
+        "13": [0, 4, 7, 10, 14, 17, 21],
+        "m13": [0, 3, 7, 10, 14, 17, 21],
+        "add2": [0, 2, 4, 7],
+        "add4": [0, 4, 5, 7],
+        "add9": [0, 4, 7, 14],
+        "add11": [0, 4, 7, 17],
+        "add13": [0, 4, 7, 21],
+        "madd2": [0, 2, 3, 7],
+        "madd4": [0, 3, 5, 7],
+        "madd9": [0, 3, 7, 14],
+        "madd11": [0, 3, 7, 17],
+        "madd13": [0, 3, 7, 21],
+        "major": major,
+        "maj": major,
+        "M": major,
+        "minor": minor,
+        "min": minor,
+        "m": minor,
+        "major7": major7,
+        "dom7": dom7,
+        "7": dom7,
+        "M7": major7,
+        "minor7": minor7,
+        "m7": minor7,
+        "augmented": aug,
+        "a": aug,
+        "aug": aug,
+        "diminished": dim,
+        "dim": dim,
+        "i": dim,
+        "diminished7": dim7,
+        "dim7": dim7,
+        "i7": dim7,
+        "halfdim": halfdim,
+        "m7b5": halfdim,
+        "m7-5": halfdim,
+    }
+    all_chords_names = list(all_chords.keys())
+    return (all_chords, all_chords_names)
+
+CHORDS, CHORD_NAMES = __build_chords()

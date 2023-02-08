@@ -30,7 +30,7 @@ from .classes import (
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS
-from .scale import parse_roman
+from .scale import parse_roman, chord_from_roman_numeral
 
 
 # pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
@@ -114,8 +114,9 @@ class ZiffersTransformer(Transformer):
         numeral = items[0].value
         if len(items)>1:
             name = items[1]
-            return RomanNumeral(text=numeral, value=parse_roman(numeral), chord_type=name)
-        return RomanNumeral(value=parse_roman(numeral), text=numeral)
+            notes = chord_from_roman_numeral(numeral,name)
+            return RomanNumeral(text=numeral, value=parse_roman(numeral), chord_type=name, notes=notes)
+        return RomanNumeral(value=parse_roman(numeral), text=numeral, notes=chord_from_roman_numeral(numeral))
 
     def chord_name(self,item):
         """Return name for chord"""

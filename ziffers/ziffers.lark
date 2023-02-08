@@ -12,7 +12,7 @@
    
     // Chords
     chord: pitch_class pitch_class+
-    named_roman: roman_number (("^" chord_name) | ("+" number))?
+    named_roman: roman_number (("^" chord_name))? // TODO: Add | ("+" number)
     chord_name: /[a-zA-Z0-9]+/
     ?roman_number: /iv|v|v?i{1,3}/
   

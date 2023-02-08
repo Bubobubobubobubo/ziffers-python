@@ -6,6 +6,7 @@ import random
 from .defaults import DEFAULT_OPTIONS
 from .scale import note_from_pc
 
+
 @dataclass
 class Meta:
     """Abstract class for all Ziffers items"""
@@ -80,8 +81,9 @@ class Pitch(Event):
     octave: int = field(default=None)
     note: int = field(default=None)
 
-    def set_note(self,note: int):
+    def set_note(self, note: int):
         self.note = note
+        return note
 
 
 @dataclass
@@ -103,7 +105,11 @@ class Chord(Event):
     """Class for chords"""
 
     pitch_classes: list[Pitch] = field(default=None)
+    notes: list[int] = field(default=None)
 
+    def set_notes(self, notes: list[int]):
+        """Set notes to the class"""
+        self.notes = notes
 
 @dataclass
 class RomanNumeral(Event):
@@ -111,6 +117,7 @@ class RomanNumeral(Event):
 
     value: str = field(default=None)
     chord_type: str = field(default=None)
+    notes: list[int] = field(default_factory=[])
 
 
 @dataclass
@@ -206,10 +213,16 @@ class Ziffers(Sequence):
         self.current.update_new(self.options)
 
         # Resolve note from scale
-        if set(("key","scale")) <= self.options.keys():
-            if isinstance(self.current,(Pitch,RandomPitch)):
-                note = note_from_pc(self.options["key"],self.current.pitch_class,self.options["scale"])
+        if set(("key", "scale")) <= self.options.keys():
+            key = self.options["key"]
+            scale = self.options["scale"]
+            if isinstance(self.current, (Pitch, RandomPitch)):
+                note = note_from_pc(key,self.current.pitch_class,scale)
                 self.current.set_note(note)
+            elif isinstance(self.current,Chord):
+                pcs = self.current.pitch_classes
+                notes = [pc.set_note(note_from_pc(key, pc.pitch_class, scale)) for pc in pcs]
+                self.current.set_notes(notes)
 
         self.loop_i += 1
         return self.current
@@ -224,6 +237,9 @@ class Ziffers(Sequence):
             list: List of pitch class items
         """
         return list(itertools.islice(itertools.cycle(self), num))
+
+    def loop(self) -> iter:
+        return itertools.cycle(self.iterator)
 
     def set_defaults(self, options: dict):
         """Sets options for the parser
