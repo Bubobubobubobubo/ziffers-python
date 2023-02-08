@@ -4,7 +4,7 @@ import itertools
 import operator
 import random
 from .defaults import DEFAULT_OPTIONS
-from .scale import note_from_pc
+from .scale import note_from_pc, midi_to_pitch_class
 
 
 @dataclass
@@ -79,6 +79,7 @@ class Pitch(Event):
 
     pitch_class: int = field(default=None)
     octave: int = field(default=None)
+    modifier: int = field(default=None)
     note: int = field(default=None)
 
     def set_note(self, note: int):
@@ -118,6 +119,16 @@ class RomanNumeral(Event):
     value: str = field(default=None)
     chord_type: str = field(default=None)
     notes: list[int] = field(default_factory=[])
+    pitch_classes: list = None
+
+    def set_notes(self, chord_notes: list[int]):
+        self.notes = chord_notes
+
+    def set_pitch_classes(self, pitches: list[tuple]):
+        if self.pitch_classes == None:
+            self.pitch_classes = []
+        for pitch in pitches:
+            self.pitch_classes.append(Pitch(**pitch))
 
 
 @dataclass
@@ -212,7 +223,7 @@ class Ziffers(Sequence):
         # Update collected options & default options
         self.current.update_new(self.options)
 
-        # Resolve note from scale
+        # Resolve note(s) from scale
         if set(("key", "scale")) <= self.options.keys():
             key = self.options["key"]
             scale = self.options["scale"]
@@ -223,6 +234,10 @@ class Ziffers(Sequence):
                 pcs = self.current.pitch_classes
                 notes = [pc.set_note(note_from_pc(key, pc.pitch_class, scale)) for pc in pcs]
                 self.current.set_notes(notes)
+            elif isinstance(self.current,RomanNumeral):
+                pitch_classes = [midi_to_pitch_class(note, key, scale) for note in self.current.notes]
+                self.current.set_pitch_classes(pitch_classes)
+
 
         self.loop_i += 1
         return self.current

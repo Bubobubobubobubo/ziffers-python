@@ -114,8 +114,9 @@ class ZiffersTransformer(Transformer):
         numeral = items[0].value
         if len(items)>1:
             name = items[1]
-            notes = chord_from_roman_numeral(numeral,name)
-            return RomanNumeral(text=numeral, value=parse_roman(numeral), chord_type=name, notes=notes)
+            chord_notes = chord_from_roman_numeral(numeral,name)
+            parsed_number = parse_roman(numeral)
+            return RomanNumeral(text=numeral, value=parsed_number, chord_type=name, notes=chord_notes)
         return RomanNumeral(value=parse_roman(numeral), text=numeral, notes=chord_from_roman_numeral(numeral))
 
     def chord_name(self,item):

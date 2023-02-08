@@ -188,18 +188,6 @@ def midi_to_tpc(note: int, key: str | int):
     return (note * 7 + 26 - (11 + acc)) % 12 + (11 + acc)
 
 
-def midi_to_pitch_class(note: int) -> int:
-    """Return pitch class from midi
-
-    Args:
-        note (int): Note in midi
-
-    Returns:
-        int: Returns note % 12
-    """
-    return note % 12
-
-
 def midi_to_octave(note: int) -> int:
     """Return octave for the midi note
 
@@ -212,7 +200,7 @@ def midi_to_octave(note: int) -> int:
     return 0 if note <= 0 else floor(note / 12)
 
 
-def midi_to_pc(note: int, key: str | int, scale: str) -> tuple:
+def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
     """Return pitch class and octave from given midi note, key and scale
 
     Args:
@@ -223,13 +211,14 @@ def midi_to_pc(note: int, key: str | int, scale: str) -> tuple:
     Returns:
         tuple: Returns tuple containing (pitch class as string, pitch class, octave, optional modifier)
     """
-    sharps = ["0", "#0", "1", "#1", "2", "3", "#3", "4", "#4", "5", "#5", "6"]
-    flats = ["0", "b1", "1", "b2", "2", "3", "b4", "4", "b5", "5", "b6", "6"]
-    tpc = midi_to_tpc(note, key)
-    pitch_class = midi_to_pitch_class(note)
+    pitch_class = note % 12
     octave = midi_to_octave(note) - 5
     if scale.upper() == "CHROMATIC":
         return (str(pitch_class), pitch_class, octave)
+
+    sharps = ["0", "#0", "1", "#1", "2", "3", "#3", "4", "#4", "5", "#5", "6"]
+    flats = ["0", "b1", "1", "b2", "2", "3", "b4", "4", "b5", "5", "b6", "6"]
+    tpc = midi_to_tpc(note, key)
     if tpc >= 6 and tpc <= 12 and len(flats[pitch_class]) == 2:
         npc = flats[pitch_class]
     elif tpc >= 20 and tpc <= 26 and len(sharps[pitch_class]) == 2:
@@ -238,12 +227,19 @@ def midi_to_pc(note: int, key: str | int, scale: str) -> tuple:
         npc = sharps[pitch_class]
 
     if len(npc) > 1:
-        return (npc, int(npc[1]), octave, 1 if (npc[0] == "#") else -1)
+        return {
+            "text": npc,
+            "pitch_class": int(npc[1]),
+            "octave": octave,
+            "modifier": 1 if (npc[0] == "#") else -1,
+        }
 
-    return (npc, int(npc), octave)
+    return {"text": npc, "pitch_class": int(npc), "octave": octave}
 
 
-def chord_from_roman_numeral(roman: str, name: str = "major", num_octaves: int = 1) -> list[int]:
+def chord_from_roman_numeral(
+    roman: str, name: str = "major", num_octaves: int = 1
+) -> list[int]:
     """Generates chord from given roman numeral and chord name
 
     Args:
@@ -256,7 +252,7 @@ def chord_from_roman_numeral(roman: str, name: str = "major", num_octaves: int =
     """
     root = parse_roman(roman) - 1
     tonic = (DEFAULT_OCTAVE * 12) + root + 12
-    intervals = CHORDS.get(name,CHORDS["major"])
+    intervals = CHORDS.get(name, CHORDS["major"])
     notes = []
     for cur_oct in range(num_octaves):
         for iterval in intervals:
