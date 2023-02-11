@@ -40,8 +40,7 @@ def zparse(expr: str, **opts) -> Ziffers:
         Ziffers: Returns Ziffers iterable parsed with the given options
     """
     parsed = parse_expression(expr)
-    if opts:
-        parsed.init_opts(opts)
+    parsed.init_opts(opts)
     return parsed
 
 
@@ -51,4 +50,3 @@ def zparse(expr: str, **opts) -> Ziffers:
 def z(expr: str, **opts) -> Ziffers:
     """Shortened method name for zparse"""
     return zparse(expr, **opts)
-    

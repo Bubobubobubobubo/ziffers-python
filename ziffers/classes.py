@@ -420,7 +420,7 @@ class Ziffers(Sequence):
     # pylint: disable=locally-disabled, dangerous-default-value
     def init_opts(self, options=None):
         """Evaluate the Ziffers tree using the options"""
-        if options is None:
+        if options is None or len(options)<=0:
             self.options = DEFAULT_OPTIONS
         else:
             self.options.update(options)
