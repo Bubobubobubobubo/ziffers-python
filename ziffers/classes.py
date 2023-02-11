@@ -137,7 +137,7 @@ class Pitch(Event):
         return note
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self, re_eval=False) -> int:
+    def get_value(self) -> int:
         """Returns the pitch class
 
         Returns:
@@ -153,7 +153,7 @@ class RandomPitch(Event):
     pitch_class: int = field(default=None)
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self, re_eval=False) -> int:
+    def get_value(self) -> int:
         """Return random value
 
         Returns:
@@ -251,14 +251,14 @@ class Sequence(Meta):
             text = text + self.wrap_end
         return text
 
-    def evaluate_tree(self, options=None, re_eval=False):
+    def evaluate_tree(self, options=None):
         """Evaluates and flattens the Ziffers object tree"""
         for item in self.values:
             if isinstance(item, Sequence):
                 if item.evaluation:
-                    yield from item.evaluate(options, re_eval)
+                    yield from item.evaluate(options)
                 else:
-                    yield from item.evaluate_tree(options, re_eval)
+                    yield from item.evaluate_tree(options)
             else:
                 # Get value / generated value from the item
                 current = item.get_item()
@@ -268,8 +268,10 @@ class Sequence(Meta):
                         options = self.__update_options(current, options)
                     else:
                         if set(("key", "scale")) <= options.keys():
+                            if isinstance(current,Cyclic):
+                                current = current.get_value()
                             if isinstance(current, (Pitch, RandomPitch, RandomInteger)):
-                                current = self.__update_pitch(current, options, re_eval)
+                                current = self.__update_pitch(current, options)
                             elif isinstance(current, Chord):
                                 current = self.__update_chord(current, options)
                             elif isinstance(current, RomanNumeral):
@@ -311,7 +313,7 @@ class Sequence(Meta):
                 options[current.key] = current.value
         return options
 
-    def __update_pitch(self, current: Item, options: dict, re_eval: bool = False) -> dict:
+    def __update_pitch(self, current: Item, options: dict) -> dict:
         """Update pich based on optons
 
         Args:
@@ -337,14 +339,14 @@ class Sequence(Meta):
 
         note = note_from_pc(
             root=options["key"],
-            pitch_class=current.get_value(re_eval),
+            pitch_class=current.get_value(),
             intervals=options["scale"],
             modifier=c_modifier,
             octave=c_octave,
         )
         new_pitch = Pitch(
-            pitch_class=current.get_value(re_eval),
-            text=str(current.get_value(re_eval)),
+            pitch_class=current.get_value(),
+            text=str(current.get_value()),
             note=note,
             octave=c_octave,
             modifier=c_modifier,
@@ -415,14 +417,21 @@ class Ziffers(Sequence):
         self.loop_i += 1
         return self.current
 
-    def init_opts(self, options):
+    # pylint: disable=locally-disabled, dangerous-default-value
+    def init_opts(self, options=None):
         """Evaluate the Ziffers tree using the options"""
-        self.options = options
+        if options is None:
+            self.options = DEFAULT_OPTIONS
+        else:
+            self.options.update(options)
+        
         self.iterator = iter(self.evaluate_tree(self.options))
 
-    def re_eval(self, options):
+    def re_eval(self, options=None):
         """Re-evaluate the iterator"""
-        self.iterator = iter(self.evaluate_tree(options, True))
+        if options is not None:
+            self.options.update(options)
+        self.iterator = iter(self.evaluate_tree(self.options))
 
     def get_list(self):
         """Return list"""
@@ -486,7 +495,7 @@ class Integer(Item):
     value: int
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self, re_eval=False):
+    def get_value(self):
         """Return value of the integer"""
         return self.value
 
@@ -506,7 +515,7 @@ class RandomInteger(Item):
             self.max = new_max
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self, re_eval=False):
+    def get_value(self):
         """Evaluate the random value for the generator"""
         return random.randint(self.min, self.max)
 
@@ -550,13 +559,10 @@ class Cyclic(Item):
             text = text + self.wrap_end
         return text
 
-    def get_value(self, re_eval=False):
-        """Get the value for the current cycle"""
+    def get_value(self):
+        """Get the value for the current cycle"""  
         value = self.values[self.cycle % len(self.values)]
-        if re_eval:  # If re-evaluated
-            self.cycle = 0
-        else:
-            self.cycle += 1
+        self.cycle += 1
         return value
 
 
@@ -592,7 +598,7 @@ class ListOperation(Sequence):
             elif isinstance(item, keep):
                 yield item
 
-    def evaluate(self, options: dict, re_eval=False):
+    def evaluate(self, options: dict):
         """Evaluates the operation"""
         operators = self.values[1::2]  # Fetch every second operator element
         values = self.values[::2]  # Fetch every second list element
@@ -604,7 +610,7 @@ class ListOperation(Sequence):
             if isinstance(right_value, Sequence):
                 result = [
                     Pitch(
-                        pitch_class=operation(x.get_value(re_eval), y.get_value(re_eval)),
+                        pitch_class=operation(x.get_value(), y.get_value()),
                         kwargs=options,
                     )
                     for x in result
@@ -614,7 +620,7 @@ class ListOperation(Sequence):
                 result = [
                     Pitch(
                         pitch_class=operation(
-                            x.get_value(re_eval), right_value.get_value(re_eval)
+                            x.get_value(), right_value.get_value()
                         ),
                         kwargs=options,
                     )
