@@ -107,8 +107,7 @@ class Pitch(Event):
             self.update_note()
 
     def update_note(self):
-        """Update note if Key, Scale and Pitch-class is present
-        """
+        """Update note if Key, Scale and Pitch-class is present"""
         if (
             (self.key is not None)
             and (self.scale is not None)
@@ -268,7 +267,7 @@ class Sequence(Meta):
                         options = self.__update_options(current, options)
                     else:
                         if set(("key", "scale")) <= options.keys():
-                            if isinstance(current,Cyclic):
+                            if isinstance(current, Cyclic):
                                 current = current.get_value()
                             if isinstance(current, (Pitch, RandomPitch, RandomInteger)):
                                 current = self.__update_pitch(current, options)
@@ -420,16 +419,18 @@ class Ziffers(Sequence):
     # pylint: disable=locally-disabled, dangerous-default-value
     def init_opts(self, options=None):
         """Evaluate the Ziffers tree using the options"""
-        if options is None or len(options)<=0:
-            self.options = DEFAULT_OPTIONS
-        else:
+        self.options.update(DEFAULT_OPTIONS)
+        if options:
             self.options.update(options)
-        
+        else:
+            self.options = DEFAULT_OPTIONS
+
         self.iterator = iter(self.evaluate_tree(self.options))
 
     def re_eval(self, options=None):
         """Re-evaluate the iterator"""
-        if options is not None:
+        self.options.update(DEFAULT_OPTIONS)
+        if options:
             self.options.update(options)
         self.iterator = iter(self.evaluate_tree(self.options))
 
@@ -560,7 +561,7 @@ class Cyclic(Item):
         return text
 
     def get_value(self):
-        """Get the value for the current cycle"""  
+        """Get the value for the current cycle"""
         value = self.values[self.cycle % len(self.values)]
         self.cycle += 1
         return value
@@ -619,9 +620,7 @@ class ListOperation(Sequence):
             else:
                 result = [
                     Pitch(
-                        pitch_class=operation(
-                            x.get_value(), right_value.get_value()
-                        ),
+                        pitch_class=operation(x.get_value(), right_value.get_value()),
                         kwargs=options,
                     )
                     for x in result
