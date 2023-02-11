@@ -323,14 +323,14 @@ class Sequence(Meta):
         """
         if hasattr(current, "modifier"):
             c_modifier = 0
-        elif options["modifier"]:
+        elif "modifier" in options:
             c_modifier = options["modifier"]
         else:
             c_modifier = 0
 
         if hasattr(current, "octave"):
             c_octave = 0
-        elif options["octave"]:
+        elif "octave" in options:
             c_octave = options["octave"]
         else:
             c_octave = 0
