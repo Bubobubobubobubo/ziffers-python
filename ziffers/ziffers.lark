@@ -18,7 +18,7 @@
     ?roman_number: /iv|v|v?i{1,3}/
   
     // Valid as integer
-    ?number: NUMBER | random_integer | cyclic_number
+    number: NUMBER | random_integer | cyclic_number
     cyclic_number: "<" number (WS number)* ">"
 
     // Repeats
@@ -29,7 +29,8 @@
     repeated_list: prefix* "(:" sequence ":" [number] ")"
 
     // Right recursive list operation
-    list_op: list (operator (list | number))+
+    list_op: list (operator right_op)+
+    right_op: list | number
     operator: /([\+\-\*\/%]|<<|>>)/
 
     // Euclidean cycles
@@ -64,8 +65,8 @@
     random_integer: /\(-?[0-9]+,-?[0-9]+\)/
     range: /-?[0-9]\.\.-?[0-9]/
     cycle: "<" sequence ">"
-    random_pitch: "?"
-    random_percent: "%"
+    random_pitch: /(\?)(?!\d)/
+    random_percent: /(%)(?!\d)/
 
     // Rules for evaluating clauses inside {}
     // TODO: Support for parenthesis?

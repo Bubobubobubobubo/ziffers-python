@@ -15,11 +15,11 @@ from ziffers import scale
     ],
 )
 def test_notenames(name: str, expected: int):
-    assert scale.note_to_midi(name) == expected
+    assert scale.note_name_to_midi(name) == expected
 
 
 @pytest.mark.parametrize(
-    "pcs,expected",
+    "pitch_classes,expected",
     [
         (
             list(range(-9, 10)),
@@ -47,7 +47,7 @@ def test_notenames(name: str, expected: int):
         ),
     ],
 )
-def test_note_to_midi(pcs: str, expected: int):
+def test_note_to_midi(pitch_classes: str, expected: int):
     assert [
-        scale.note_from_pc(root=60, pitch_class=val, intervals="Ionian") for val in pcs
+        scale.note_from_pc(root=60, pitch_class=val, intervals="Ionian") for val in pitch_classes
     ] == expected

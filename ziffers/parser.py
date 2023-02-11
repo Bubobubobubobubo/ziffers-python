@@ -41,58 +41,14 @@ def zparse(expr: str, **opts) -> Ziffers:
     """
     parsed = parse_expression(expr)
     if opts:
-        parsed.set_defaults(opts)
+        parsed.init_opts(opts)
     return parsed
 
 
 # pylint: disable=invalid-name
 
 
-def z0(expr: str, **opts) -> Ziffers:
+def z(expr: str, **opts) -> Ziffers:
     """Shortened method name for zparse"""
     return zparse(expr, **opts)
-
-
-def z1(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z2(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z3(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z4(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z5(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z6(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z7(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z8(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
-
-
-def z9(expr: str, **opts) -> Ziffers:
-    """Shortened method name for zparse"""
-    return zparse(expr, **opts)
+    

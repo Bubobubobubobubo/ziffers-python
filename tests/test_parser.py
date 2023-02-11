@@ -46,8 +46,8 @@ def test_parsing_text(pattern: str):
         ("q2 eq3", [2, 3]),
     ],
 )
-def test_pcs(pattern: str, expected: list):
-    assert parse_expression(pattern).pcs() == expected
+def test_pitch_classes(pattern: str, expected: list):
+    assert parse_expression(pattern).pitch_classes() == expected
 
 # TODO: Add tests for octaves
 #        ("__6 _0 _1 _2 _3 _4 _5 _6 0 1 2 3 4 5 6 ^0 ^1 ^2 ^3 ^4 ^5 ^6 ^^0", [-2, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2]),

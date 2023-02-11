@@ -29,7 +29,7 @@ from .classes import (
     RepeatedSequence,
 )
 from .common import flatten, sum_dict
-from .defaults import DEFAULT_DURS
+from .defaults import DEFAULT_DURS, OPERATORS
 from .scale import parse_roman, chord_from_roman_numeral
 
 
@@ -43,8 +43,8 @@ class ZiffersTransformer(Transformer):
 
     def start(self, items) -> Ziffers:
         """Root for the rules"""
-        seq = Sequence(values=items[0])
-        return Ziffers(values=seq, options={})
+       # seq = Sequence(values=items[0])
+        return Ziffers(values=items[0], options={})
 
     def sequence(self, items):
         """Flatten sequence"""
@@ -53,7 +53,7 @@ class ZiffersTransformer(Transformer):
     def random_integer(self, item) -> RandomInteger:
         """Parses random integer syntax"""
         val = item[0][1:-1].split(",")
-        return RandomInteger(min=val[0], max=val[1], text=item[0].value)
+        return RandomInteger(min=int(val[0]), max=int(val[1]), text=item[0].value)
 
     def range(self, item) -> Range:
         """Parses range syntax"""
@@ -284,14 +284,14 @@ class ZiffersTransformer(Transformer):
                 )
             return seq
 
-    def SIGNED_NUMBER(self, token):
+    def NUMBER(self, token):
         """Parse integer"""
         val = token.value
         return Integer(text=val, value=int(val))
 
     def number(self, item):
         """Return partial number (Integer or RandomInteger)"""
-        return item
+        return item[0]
 
     def cyclic_number(self, item):
         """Parse cyclic notation"""
@@ -310,7 +310,7 @@ class ZiffersTransformer(Transformer):
     def operator(self, token):
         """Parse operator"""
         val = token[0].value
-        return Operator(text=val)
+        return Operator(text=val, value=OPERATORS[val])
 
     def list_items(self, items):
         """Parse sequence"""
@@ -319,6 +319,10 @@ class ZiffersTransformer(Transformer):
     def list_op(self, items):
         """Parse list operation"""
         return ListOperation(values=items)
+
+    def right_op(self,items):
+        """Get right value for the operation"""
+        return items[0]
 
     def euclid(self, items):
         """Parse euclid notation"""

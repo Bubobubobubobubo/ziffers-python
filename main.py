@@ -39,4 +39,4 @@ if __name__ == "__main__":
             print("Parsed: " + parse_expression(expressions[ex]).text)
         except Exception as e:
             print(f"[red]Failed on {ex}[/red]")
-            # print(f"[red]Failed on {ex}[/red]: {str(e)[0:40]}...")
+           # print(f"[red]Failed on {ex}[/red]: {str(e)[0:40]}...")

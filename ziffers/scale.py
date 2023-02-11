@@ -209,7 +209,7 @@ def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
         scale (str): Used scale
 
     Returns:
-        tuple: Returns tuple containing (pitch class as string, pitch class, octave, optional modifier)
+        tuple: Returns dict containing pitch-class values
     """
     pitch_class = note % 12
     octave = midi_to_octave(note) - 5
