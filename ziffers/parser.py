@@ -1,57 +1,52 @@
-from parsimonious.grammar import Grammar
-from parsimonious.nodes import NodeVisitor
-from rich import print
-from .ebnf import ebnf
+""" Module for the parser """
+from pathlib import Path
+from lark import Lark
+from .classes import Ziffers
+from .mapper import ZiffersTransformer
 
-__all__ = ('ZiffersVisitor', 'parse_expression',)
 
-GRAMMAR = Grammar(ebnf)
+grammar_path = Path(__file__).parent
+grammar = grammar_path / "ziffers.lark"
 
-class ZiffersVisitor(NodeVisitor):
+ziffers_parser = Lark.open(
+    grammar,
+    rel_to=__file__,
+    start="root",
+    parser="lalr",
+    transformer=ZiffersTransformer(),
+)
 
+
+def parse_expression(expr: str) -> Ziffers:
+    """Parse an expression using the Ziffers parser
+
+    Args:
+        expr (str): Ziffers expression as a string
+
+    Returns:
+        Ziffers: Reutrns Ziffers iterable
     """
-    Visitor for the Ziffers syntax.
+    return ziffers_parser.parse(expr)
+
+
+def zparse(expr: str, **opts) -> Ziffers:
+    """Parses ziffers expression with options
+
+    Args:
+        expr (str): Ziffers expression as a string
+        opts (dict, optional): Options for parsing the Ziffers expression. Defaults to None.
+
+    Returns:
+        Ziffers: Returns Ziffers iterable parsed with the given options
     """
+    parsed = parse_expression(expr)
+    parsed.init_opts(opts)
+    return parsed
 
-    def visit_ziffers(self, node, children):
-        """
-        Top-level visiter. Will traverse and build something out of a complete and valid
-        Ziffers expression.
-        """
-        print(f"Node: {node}, Children: {children}")
-        result = {'ziffers': []}
 
-        for i in children:
-            if i[0] in (None, [], {}) and isinstance(i[0], dict):
-                continue
-            try:
-                result['ziffers'].append(i[0])
-            except Exception as e:
-                print(f"[red]Error in ziffers:[/red] {e}")
-                pass
-        return result
+# pylint: disable=invalid-name
 
-    def visit_pc(self, node, children):
-        return {node.expr_name: node.text}
 
-    def visit_escape(self, node, children):
-        return {node.expr_name: node.text}
-
-    # def visit_subdiv(self, node, visited_children):
-    #     key, values = visited_children
-    #     ret)rn {key, dict(values)}
-
-    def generic_visit(self, node, children):
-        """
-        This method seem to be the generic method to include in any NodeVisitor.
-        Probably better to keep it as is for the moment. This is appending a whole
-        lot of garbage to the final expression because I don't really know how to
-        write it properly...
-        """
-        return children or node
-
-def parse_expression(expression: str) -> dict:
-    tree = GRAMMAR.parse(expression)
-    visitor = ZiffersVisitor()
-    return visitor.visit(tree)
-
+def z(expr: str, **opts) -> Ziffers:
+    """Shortened method name for zparse"""
+    return zparse(expr, **opts)
