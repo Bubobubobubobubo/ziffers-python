@@ -43,6 +43,15 @@ DEFAULT_OCTAVE = 4
 
 DEFAULT_OPTIONS = {"octave": 0, "duration": 0.25}
 
+OPERATORS = {
+    "+": operator.add,
+    "-": operator.sub,
+    "*": operator.mul,
+    "/": operator.truediv,
+    "%": operator.mod,
+}
+
+
 NOTES_TO_INTERVALS = {
  'C': 0,
  'Cs': 1,
@@ -82,14 +91,6 @@ MODIFIERS = {
 }
 
 ROMANS = {"i": 1, "v": 5, "x": 10, "l": 50, "c": 100, "d": 500, "m": 1000}
-
-OPERATORS = {
-    "+": operator.add,
-    "-": operator.sub,
-    "*": operator.mul,
-    "/": operator.truediv,
-    "%": operator.mod,
-}
 
 # pylint: disable=locally-disabled, too-many-lines
 

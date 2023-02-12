@@ -1,6 +1,6 @@
 """ Test cases for the parser """
 import pytest
-from ziffers import parse_expression
+from ziffers import zparse
 
 
 def test_can_parse():
@@ -17,7 +17,7 @@ def test_can_parse():
     for expression in expressions:
         try:
             print(f"Parsing expression: {expression}")
-            result = parse_expression(expression)
+            result = zparse(expression)
             results.append(True)
         except Exception as e:
             print(e)
@@ -36,7 +36,7 @@ def test_can_parse():
     ],
 )
 def test_parsing_text(pattern: str):
-    assert parse_expression(pattern).text == pattern
+    assert zparse(pattern).text == pattern
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_parsing_text(pattern: str):
     ],
 )
 def test_pitch_classes(pattern: str, expected: list):
-    assert parse_expression(pattern).pitch_classes() == expected
+    assert zparse(pattern).pitch_classes() == expected
 
 # TODO: Add tests for octaves
 #        ("__6 _0 _1 _2 _3 _4 _5 _6 0 1 2 3 4 5 6 ^0 ^1 ^2 ^3 ^4 ^5 ^6 ^^0", [-2, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2]),

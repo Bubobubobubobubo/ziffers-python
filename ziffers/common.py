@@ -17,3 +17,4 @@ def sum_dict(arr: list[dict]) -> dict:
             else:
                 result[key] = element[key]
     return result
+    

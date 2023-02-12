@@ -1,6 +1,6 @@
 """ Ziffers classes for the parsed notation """
 from dataclasses import dataclass, field, replace
-import itertools
+from itertools import product, islice, cycle
 import operator
 import random
 from .defaults import DEFAULT_OPTIONS
@@ -225,7 +225,7 @@ class Sequence(Meta):
     wrap_start: str = field(default=None, repr=False)
     wrap_end: str = field(default=None, repr=False)
     local_index: int = field(default=0, init=False)
-    evaluation: bool = field(default=False, init=False)
+    evaluated_values: list = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -250,12 +250,13 @@ class Sequence(Meta):
             text = text + self.wrap_end
         return text
 
-    def evaluate_tree(self, options=None):
+    def evaluate_tree(self, options=None, eval_tree=False):
         """Evaluates and flattens the Ziffers object tree"""
-        for item in self.values:
+        values = self.evaluated_values if eval_tree else self.values
+        for item in values:
             if isinstance(item, Sequence):
-                if item.evaluation:
-                    yield from item.evaluate(options)
+                if isinstance(item, ListOperation):
+                    yield from item.evaluate_tree(options, True)
                 else:
                     yield from item.evaluate_tree(options)
             else:
@@ -425,14 +426,16 @@ class Ziffers(Sequence):
         else:
             self.options = DEFAULT_OPTIONS
 
-        self.iterator = iter(self.evaluate_tree(self.options))
+        self.evaluated_values = list(self.evaluate_tree(self.options))
+        self.iterator = iter(self.evaluated_values)
 
     def re_eval(self, options=None):
         """Re-evaluate the iterator"""
         self.options.update(DEFAULT_OPTIONS)
         if options:
             self.options.update(options)
-        self.iterator = iter(self.evaluate_tree(self.options))
+        self.evaluated_values = list(self.evaluate_tree(self.options))
+        self.iterator = iter(self.evaluated_values)
 
     def get_list(self):
         """Return list"""
@@ -447,11 +450,11 @@ class Ziffers(Sequence):
         Returns:
             list: List of pitch class items
         """
-        return list(itertools.islice(itertools.cycle(self), num))
+        return list(islice(cycle(self), num))
 
     def loop(self) -> iter:
         """Return cyclic loop"""
-        return itertools.cycle(iter(self))
+        return cycle(iter(self))
 
     def set_defaults(self, options: dict):
         """Sets options for the parser
@@ -461,24 +464,27 @@ class Ziffers(Sequence):
         """
         self.options = DEFAULT_OPTIONS | options
 
-    # TODO: Refactor these
     def pitch_classes(self) -> list[int]:
         """Return list of pitch classes as ints"""
-        return [val.pitch_class for val in self.values if isinstance(val, Pitch)]
+        return [
+            val.pitch_class for val in self.evaluated_values if isinstance(val, Pitch)
+        ]
 
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
-        return [val.dur for val in self.values if isinstance(val, Pitch)]
+        return [val.duration for val in self.evaluated_values if isinstance(val, Pitch)]
 
     def pairs(self) -> list[tuple]:
         """Return list of pitches and durations"""
         return [
-            (val.pitch_class, val.dur) for val in self.values if isinstance(val, Pitch)
+            (val.pitch_class, val.duration)
+            for val in self.evaluated_values
+            if isinstance(val, Pitch)
         ]
 
     def octaves(self) -> list[int]:
         """Return list of octaves"""
-        return [val.octave for val in self.values if isinstance(val, Pitch)]
+        return [val.octave for val in self.evaluated_values if isinstance(val, Pitch)]
 
 
 @dataclass(kw_only=True)
@@ -586,46 +592,48 @@ class Operator(Item):
 class ListOperation(Sequence):
     """Class for list operations"""
 
+    evaluated_values: list = None
+
     def __post_init__(self):
         super().__post_init__()
-        self.evaluation = True
+        self.evaluated_values = self.evaluate()
 
-    def filter_operation(self, values):
-        """Filtering for the operation elements"""
-        keep = (Sequence, Event, RandomInteger, Integer, Cyclic)
-        for item in values:
-            if isinstance(item, Sequence):
-                yield item.filter(keep)
-            elif isinstance(item, keep):
-                yield item
-
-    def evaluate(self, options: dict):
+    def evaluate(self):
         """Evaluates the operation"""
+
+        def filter_operation(input_list):
+            flattened_list = []
+
+            for item in input_list:
+                if isinstance(item, (list, Sequence)):
+                    if isinstance(item, ListOperation):
+                        flattened_list.extend(item.evaluated_values)
+                    else:
+                        flattened_list.append(filter_operation(item))
+                elif isinstance(item, (Event, RandomInteger, Integer, Cyclic)):
+                    flattened_list.append(item)
+
+            if isinstance(input_list, Sequence):
+                return replace(input_list, values=flattened_list)
+
+            return flattened_list
+
         operators = self.values[1::2]  # Fetch every second operator element
         values = self.values[::2]  # Fetch every second list element
-        values = list(self.filter_operation(values))  # Filter out crap
-        result = values[0]  # Start results with the first array
+        values = filter_operation(values)  # Filter out crap
+        left = values[0]  # Start results with the first array
+
         for i, operand in enumerate(operators):
             operation = operand.value
-            right_value = values[i + 1]
-            if isinstance(right_value, Sequence):
-                result = [
-                    Pitch(
-                        pitch_class=operation(x.get_value(), y.get_value()),
-                        kwargs=options,
-                    )
-                    for x in result
-                    for y in right_value
-                ]
-            else:
-                result = [
-                    Pitch(
-                        pitch_class=operation(x.get_value(), right_value.get_value()),
-                        kwargs=options,
-                    )
-                    for x in result
-                ]
-        return Sequence(values=result)
+            right = values[i + 1]
+            pairs = product(
+                (right.values if isinstance(right, Sequence) else [right]), left
+            )
+            left = [
+                Pitch(pitch_class=operation(x.get_value(), y.get_value()))
+                for (x, y) in pairs
+            ]
+        return left
 
 
 @dataclass(kw_only=True)
