@@ -44,6 +44,10 @@ def note_name_to_interval(name: str) -> int:
     interval = NOTES_TO_INTERVALS[values[0].capitalize()]
     return interval + modifier
 
+def midi_to_freq(note: int) -> float:
+    """Transform midi to frequency""" 
+    freq = 440 # Frequency of A
+    return (freq / 32) * (2 ** ((note - 9) / 12))
 
 def note_name_to_midi(name: str) -> int:
     """Parse note name to midi

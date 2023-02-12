@@ -41,7 +41,7 @@ DEFAULT_DURS = {
 
 DEFAULT_OCTAVE = 4
 
-DEFAULT_OPTIONS = {"octave": 0, "duration": 0.25}
+DEFAULT_OPTIONS = {"octave": 0, "duration": 0.25, "key":"C4", "scale":"IONIAN"}
 
 OPERATORS = {
     "+": operator.add,

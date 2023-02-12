@@ -4,7 +4,7 @@ from itertools import product, islice, cycle
 import operator
 import random
 from .defaults import DEFAULT_OPTIONS
-from .scale import note_from_pc, midi_to_pitch_class
+from .scale import note_from_pc, midi_to_pitch_class, midi_to_freq
 
 
 @dataclass(kw_only=True)
@@ -99,12 +99,13 @@ class Pitch(Event):
     note: int = field(default=None)
     key: str = field(default=None)
     scale: str | list = field(default=None)
+    freq: float = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
         if self.text is None:
             self.text = str(self.pitch_class)
-            self.update_note()
+        self.update_note()
 
     def update_note(self):
         """Update note if Key, Scale and Pitch-class is present"""
@@ -121,7 +122,8 @@ class Pitch(Event):
                 modifier=self.modifier if self.modifier is not None else 0,
                 octave=self.octave if self.octave is not None else 0,
             )
-            self.set_note(note)
+            self.freq = midi_to_freq(note)
+            self.note = note
 
     def set_note(self, note: int) -> int:
         """Sets a note for the pitch and returns the note.
@@ -134,6 +136,9 @@ class Pitch(Event):
         """
         self.note = note
         return note
+
+    def set_freq(self, freq: float):
+        self.freq = freq
 
     # pylint: disable=locally-disabled, unused-argument
     def get_value(self) -> int:
@@ -323,19 +328,23 @@ class Sequence(Meta):
         Returns:
             dict: _description_
         """
-        if hasattr(current, "modifier"):
-            c_modifier = 0
-        elif "modifier" in options:
+        
+        if "modifier" in options:
             c_modifier = options["modifier"]
         else:
             c_modifier = 0
 
-        if hasattr(current, "octave"):
-            c_octave = 0
-        elif "octave" in options:
+        if hasattr(current, "modifier") and current.modifier is not None:
+            c_modifier += current.modifier
+
+
+        if "octave" in options:
             c_octave = options["octave"]
         else:
             c_octave = 0
+
+        if hasattr(current, "octave") and current.octave is not None:
+            c_octave += current.octave
 
         note = note_from_pc(
             root=options["key"],
@@ -348,6 +357,7 @@ class Sequence(Meta):
             pitch_class=current.get_value(),
             text=str(current.get_value()),
             note=note,
+            freq=midi_to_freq(note),
             octave=c_octave,
             modifier=c_modifier,
             kwargs=options,
