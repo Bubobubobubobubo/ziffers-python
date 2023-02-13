@@ -165,6 +165,7 @@ cython_debug/
 # VSCode
 .vscode
 
-# Debugging file
+# Debugging files
 debug.py
+test.py
 

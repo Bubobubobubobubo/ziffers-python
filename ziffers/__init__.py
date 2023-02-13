@@ -4,3 +4,4 @@ from .classes import *
 from .common import *
 from .defaults import *
 from .scale import *
+from .converters import *

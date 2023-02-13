@@ -1,5 +1,5 @@
 """ Ziffers classes for the parsed notation """
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, replace, asdict
 from itertools import product, islice, cycle
 import operator
 import random
@@ -30,6 +30,9 @@ class Meta:
             if hasattr(self, key):
                 if getattr(self, key) is None:
                     setattr(self, key, value)
+
+    def dict(self):
+        return {k: str(v) for k, v in asdict(self).items()}
 
 
 @dataclass(kw_only=True)
