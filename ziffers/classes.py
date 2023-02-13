@@ -483,6 +483,12 @@ class Ziffers(Sequence):
             val.pitch_class for val in self.evaluated_values if isinstance(val, Pitch)
         ]
 
+    def notes(self) -> list[int]:
+        """Return list of midi notes"""
+        return [
+            val.note for val in self.evaluated_values if isinstance(val, Pitch)
+        ]
+
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
         return [val.duration for val in self.evaluated_values if isinstance(val, Pitch)]
