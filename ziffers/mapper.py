@@ -267,7 +267,7 @@ class ZiffersTransformer(Transformer):
                 )
             else:
                 seq = RepeatedListSequence(
-                    values=items[-2], repeats=Integer(text="1", value=1)
+                    values=items[-2], repeats=Integer(text="2", value=2)
                 )
             seq.update_values(prefixes)
             return seq
@@ -280,7 +280,7 @@ class ZiffersTransformer(Transformer):
                 )
             else:
                 seq = RepeatedListSequence(
-                    values=items[-2], repeats=Integer(text="1", value=1)
+                    values=items[-2], repeats=Integer(text="2", value=2)
                 )
             return seq
 
@@ -348,4 +348,4 @@ class ZiffersTransformer(Transformer):
                 values=items[0], repeats=items[-1], wrap_end=":" + items[-1].text + "]"
             )
         else:
-            return RepeatedSequence(values=items[0], repeats=Integer(value=1, text="1"))
+            return RepeatedSequence(values=items[0], repeats=Integer(value=2, text="2"))
