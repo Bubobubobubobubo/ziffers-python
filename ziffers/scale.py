@@ -77,9 +77,20 @@ def get_scale(name: str) -> list[int]:
     Returns:
         list: List of intervals in the scale
     """
-    scale = SCALES.get(name.lower().capitalize(), SCALES["Chromatic"])
-    return list(map(int, str(scale)))
+    scale = SCALES.get(name.lower().capitalize(), SCALES["Ionian"])
+    return scale
 
+def get_scale_length(name: str) -> int:
+    """Get length of the scale
+
+    Args:
+        name (str): Name of the scale
+
+    Returns:
+        int: Length of the scale
+    """
+    scale = SCALES.get(name.lower().capitalize(), SCALES["Ionian"])
+    return len(scale)
 
 # pylint: disable=locally-disabled, too-many-arguments
 def note_from_pc(
@@ -186,7 +197,7 @@ def midi_to_tpc(note: int, key: str | int):
         _type_: Tonal Pitch Class value for the note
     """
     if isinstance(key, str):
-        acc = accidentals_from_note_name(key)
+        acc = accidentals_from_note_name(key[0])
     else:
         acc = accidentals_from_midi_note(key)
     return (note * 7 + 26 - (11 + acc)) % 12 + (11 + acc)

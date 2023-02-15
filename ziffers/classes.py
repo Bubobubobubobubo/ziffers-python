@@ -4,7 +4,7 @@ from itertools import product, islice, cycle
 import operator
 import random
 from .defaults import DEFAULT_OPTIONS
-from .scale import note_from_pc, midi_to_pitch_class, midi_to_freq
+from .scale import note_from_pc, midi_to_pitch_class, midi_to_freq, get_scale_length
 
 
 @dataclass(kw_only=True)
@@ -15,16 +15,16 @@ class Meta:
 
     def __post_init__(self):
         if self.kwargs:
-            self.update_new(self.kwargs)
+            self.update_options(self.kwargs)
 
-    def update(self, new_values):
-        """Update attributes from dict"""
+    def replace_options(self, new_values):
+        """Replaces attribute values from dict"""
         for key, value in new_values.items():
             if hasattr(self, key):
                 setattr(self, key, value)
 
-    def update_new(self, new_values):
-        """Updates new attributes from dict"""
+    def update_options(self, new_values):
+        """Updates attribute values only if value is None"""
         for key, value in new_values.items():
             if hasattr(self, key):
                 if getattr(self, key) is None:
@@ -169,15 +169,13 @@ class RandomPitch(Event):
 
     pitch_class: int = field(default=None)
 
-    # FIXME: Get scale length as max somehow?
-    # pylint: disable=locally-disabled, unused-argument
-    def get_value(self) -> int:
+    def get_value(self, options: dict) -> int:
         """Return random value
 
         Returns:
             int: Returns random pitch
         """
-        return random.randint(0, 9)
+        return random.randint(0, get_scale_length(options.get("scale","Major")) if options else 9)
 
 
 @dataclass(kw_only=True)
@@ -197,7 +195,15 @@ class Chord(Event):
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
         self.notes = notes
-
+    
+    def update_notes(self, options):
+        """Update notes"""
+        notes = []
+        for pitch in self.pitch_classes:
+            pitch.update_options(options)
+            pitch.update_note()
+            notes.append(pitch.note)
+        self.notes = notes
 
 @dataclass(kw_only=True)
 class RomanNumeral(Event):
@@ -277,41 +283,41 @@ class Sequence(Meta):
             eval_tree (bool, optional): Flag for using the evaluated subtree. Defaults to False.
         """
 
-        def resolve_item(item: Meta, options: dict):
+        def _resolve_item(item: Meta, options: dict):
             """Resolve cyclic value"""
             if isinstance(item, Sequence):
                 if isinstance(item, ListOperation):
                     yield from item.evaluate_tree(options, True)
                 elif isinstance(item, RepeatedSequence):
                     repeats = item.repeats.get_value()
-                    yield from normal_repeat(item.evaluated_values, repeats, options)
+                    yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value()
-                    yield from generative_repeat(item, repeats, options)
+                    yield from _generative_repeat(item, repeats, options)
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Cyclic):
-                yield from resolve_item(item.get_value(), options)
+                yield from _resolve_item(item.get_value(), options)
             elif isinstance(item, Modification):
-                options = update_options(item, options)
+                options = _update_options(item, options)
             elif isinstance(item, Meta):  # Filters whitespace
-                yield update_item(item, options)
+                yield _update_item(item, options)
 
         # pylint: disable=locally-disabled, unused-variable
-        def generative_repeat(tree: list, times: int, options: dict):
+        def _generative_repeat(tree: list, times: int, options: dict):
             """Repeats items and generates new random values"""
             for i in range(times):
                 for item in tree.evaluate_tree(options):
-                    yield from resolve_item(item, options)
+                    yield from _resolve_item(item, options)
 
         # pylint: disable=locally-disabled, unused-variable
-        def normal_repeat(tree: list, times: int, options: dict):
+        def _normal_repeat(tree: list, times: int, options: dict):
             """Repeats items with the same random values"""
             for i in range(times):
                 for item in tree:
-                    yield from resolve_item(item, options)
+                    yield from _resolve_item(item, options)
 
-        def update_options(current: Item, options: dict) -> dict:
+        def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
             if current.item_type == "change":  # Change options
                 options[current.key] = current.value
@@ -322,7 +328,7 @@ class Sequence(Meta):
                     options[current.key] = current.value
             return options
 
-        def create_pitch(current: Item, options: dict) -> dict:
+        def _create_pitch(current: Item, options: dict) -> dict:
             """Create pitch based on values and options"""
 
             if "modifier" in options:
@@ -340,17 +346,17 @@ class Sequence(Meta):
 
             if hasattr(current, "octave") and current.octave is not None:
                 c_octave += current.octave
-
+            current_value = current.get_value(options)
             note = note_from_pc(
                 root=options["key"],
-                pitch_class=current.get_value(),
+                pitch_class=current_value,
                 intervals=options["scale"],
                 modifier=c_modifier,
                 octave=c_octave,
             )
             new_pitch = Pitch(
-                pitch_class=current.get_value(),
-                text=str(current.get_value()),
+                pitch_class=current_value,
+                text=str(current_value),
                 note=note,
                 freq=midi_to_freq(note),
                 octave=c_octave,
@@ -359,57 +365,47 @@ class Sequence(Meta):
             )
             return new_pitch
 
-        def update_chord(current: Chord, options: dict) -> Chord:
-            """Update chord based on options"""
-            pcs = current.pitch_classes
-            notes = [
-                pc.set_note(
-                    note_from_pc(options["key"], pc.pitch_class, options["scale"])
-                )
-                for pc in pcs
-            ]
-            current.set_notes(notes)
-            return current
-
-        def create_chord_from_roman(current: RomanNumeral, options: dict) -> Chord:
+        def _create_chord_from_roman(current: RomanNumeral, options: dict) -> Chord:
             """Create chord fom roman numeral"""
             key = options["key"]
             scale = options["scale"]
-            pitches = [midi_to_pitch_class(note, key, scale) for note in current.notes]
-            chord_notes = [
-                note_from_pc(
+            pitch_text=""
+            pitch_classes = []
+            chord_notes = []
+            for note in current.notes:
+                pitch_dict = midi_to_pitch_class(note, key, scale)
+                pitch_classes.append(Pitch(pitch_class=pitch_dict["pitch_class"],kwargs=(pitch_dict | options)))
+                pitch_text+=pitch_dict["text"]
+                chord_notes.append(note_from_pc(
                     root=key,
-                    pitch_class=pitch,
+                    pitch_class=pitch_dict["pitch_class"],
                     intervals=scale,
-                    modifier=current.modifier if hasattr(current, "modifier") else 0,
-                )
-                for pitch in pitches
-            ]
+                    modifier=pitch_dict.get("modifier",0),
+                    octave=pitch_dict.get("octave",0)
+                ))
+
             chord = Chord(
-                text="".join(pitches), pitch_classes=pitches, notes=chord_notes
+                text=pitch_text, pitch_classes=pitch_classes, notes=chord_notes, kwargs=options
             )
             return chord
 
-        def update_item(item, options):
+        def _update_item(item, options):
             """Update or create new pitch"""
             if set(("key", "scale")) <= options.keys():
                 if isinstance(item,Pitch):
-                    # TODO: Re-evaluation?
-                    # item.check_note(options)
-                    pass
+                    item.update_options(options)
                 elif isinstance(item, (RandomPitch, RandomInteger)):
-                    item = create_pitch(item, options)
+                    item = _create_pitch(item, options)
                 elif isinstance(item, Chord):
-                    item = update_chord(item, options)
+                    item.update_notes(options)
                 elif isinstance(item, RomanNumeral):
-                    item = create_chord_from_roman(item, options)
-            item.update_new(options)
+                    item = _create_chord_from_roman(item, options)
             return item
 
         # Start of the main function: Evaluate and flatten the Ziffers object tree
         values = self.evaluated_values if eval_tree else self.values
         for item in values:
-            yield from resolve_item(item, options)
+            yield from _resolve_item(item, options)
 
     def filter(self, keep: tuple):
         """Filter out items from sequence.
@@ -551,7 +547,7 @@ class RandomInteger(Item):
             self.max = new_max
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self):
+    def get_value(self, options: dict=None):
         """Evaluate the random value for the generator"""
         return random.randint(self.min, self.max)
 
