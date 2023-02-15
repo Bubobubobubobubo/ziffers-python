@@ -1,6 +1,6 @@
 """Collection of converters"""
-from music21 import converter, note, stream, meter
-from ziffers import zparse, Ziffers
+from music21 import converter, note, stream, meter, chord
+from ziffers import zparse, Ziffers, Pitch, Rest, Chord
 
 def to_music21(strData: str|Ziffers, **options):
     """Helper for passing options to the parser"""
@@ -54,8 +54,14 @@ class ZiffersMusic21(converter.subConverters.SubConverter):
             m = meter.TimeSignature("c")  # Common time
 
         s.insert(0, m)
-        for z in parsed:
-            m_note = note.Note(z.note)
-            m_note.duration.quarterLength = z.duration * 4
-            s.append(m_note)
+        for item in parsed:
+            if isinstance(item,Pitch):
+                m_item = note.Note(item.note)
+                m_item.duration.quarterLength = item.duration * 4
+            elif isinstance(item,Rest):
+                m_item = note.Rest(item.duration * 4)
+            elif isinstance(item,Chord):
+                m_item = chord.Chord(item.notes)
+                m_item.duration.quarterLength = item.duration * 4
+            s.append(m_item)
         self.stream = s.makeMeasures()

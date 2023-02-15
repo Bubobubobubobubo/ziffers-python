@@ -401,7 +401,7 @@ class Sequence(Meta):
                 text=pitch_text,
                 pitch_classes=pitch_classes,
                 notes=chord_notes,
-                kwargs=options,
+                kwargs=options
             )
             return chord
 
@@ -416,6 +416,7 @@ class Sequence(Meta):
                 elif isinstance(item, (RandomPitch, RandomInteger)):
                     item = _create_pitch(item, options)
                 elif isinstance(item, Chord):
+                    item.update_options(options)
                     item.update_notes(options)
                 elif isinstance(item, RomanNumeral):
                     item = _create_chord_from_roman(item, options)
