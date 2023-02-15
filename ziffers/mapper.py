@@ -8,6 +8,7 @@ from .classes import (
     OctaveChange,
     OctaveAdd,
     Pitch,
+    Rest,
     RandomPitch,
     RandomPercent,
     Chord,
@@ -37,18 +38,30 @@ from .scale import parse_roman, chord_from_roman_numeral
 class ZiffersTransformer(Transformer):
     """Rules for transforming Ziffers expressions into tree."""
 
-    def __init__(self, options: Optional[dict] = None):
-        super().__init__()
-        self.options = options
-
     def start(self, items) -> Ziffers:
         """Root for the rules"""
-       # seq = Sequence(values=items[0])
         return Ziffers(values=items[0], options={})
 
     def sequence(self, items):
         """Flatten sequence"""
         return flatten(items)
+
+    def rest(self, items):
+        """Return duration event"""
+        if len(items)>0:
+            chars = items[0]
+            val = DEFAULT_DURS[chars[0]]
+            # TODO: Add support for dots
+            #if len(chars)>1:
+            #    dots = len(chars)-1
+            #    val = val * (2.0 - (1.0 / (2 * dots)))
+            return Rest(text=chars+"r", duration=val)
+        return Rest(text="r")
+
+        return Rest(text=chars+"r", duration=val)
+
+    def rest_duration(self,items):
+        return items[0].value
 
     def random_integer(self, item) -> RandomInteger:
         """Parses random integer syntax"""

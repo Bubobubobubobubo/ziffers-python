@@ -88,6 +88,9 @@ class Event(Item):
 
     duration: float = field(default=None)
 
+@dataclass
+class Rest(Event):
+    """Class for rests"""
 
 @dataclass(kw_only=True)
 class Pitch(Event):
@@ -107,7 +110,7 @@ class Pitch(Event):
             self.text = str(self.pitch_class)
         self.update_note()
 
-    def update_note(self, force: bool=False):
+    def update_note(self, force: bool = False):
         """Update note if Key, Scale and Pitch-class are present"""
         if (
             (self.key is not None)
@@ -135,7 +138,6 @@ class Pitch(Event):
             edit = True
         if edit:
             self.update_note(True)
-
 
     def set_note(self, note: int) -> int:
         """Sets a note for the pitch and returns the note.
@@ -175,7 +177,9 @@ class RandomPitch(Event):
         Returns:
             int: Returns random pitch
         """
-        return random.randint(0, get_scale_length(options.get("scale","Major")) if options else 9)
+        return random.randint(
+            0, get_scale_length(options.get("scale", "Major")) if options else 9
+        )
 
 
 @dataclass(kw_only=True)
@@ -195,7 +199,7 @@ class Chord(Event):
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
         self.notes = notes
-    
+
     def update_notes(self, options):
         """Update notes"""
         notes = []
@@ -204,6 +208,7 @@ class Chord(Event):
             pitch.update_note()
             notes.append(pitch.note)
         self.notes = notes
+
 
 @dataclass(kw_only=True)
 class RomanNumeral(Event):
@@ -257,7 +262,7 @@ class Sequence(Meta):
         self.text = self.__collect_text()
 
     def __getitem__(self, index):
-        return self.evaluated_values[index % len(self.evaluated_values)]
+        return self.values[index]
 
     def update_values(self, new_values):
         """Update value attributes from dict"""
@@ -317,6 +322,7 @@ class Sequence(Meta):
                 for item in tree:
                     yield from _resolve_item(item, options)
 
+        # TODO: Refactor types to isinstance?
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
             if current.item_type == "change":  # Change options
@@ -369,30 +375,43 @@ class Sequence(Meta):
             """Create chord fom roman numeral"""
             key = options["key"]
             scale = options["scale"]
-            pitch_text=""
+            pitch_text = ""
             pitch_classes = []
             chord_notes = []
             for note in current.notes:
                 pitch_dict = midi_to_pitch_class(note, key, scale)
-                pitch_classes.append(Pitch(pitch_class=pitch_dict["pitch_class"],kwargs=(pitch_dict | options)))
-                pitch_text+=pitch_dict["text"]
-                chord_notes.append(note_from_pc(
-                    root=key,
-                    pitch_class=pitch_dict["pitch_class"],
-                    intervals=scale,
-                    modifier=pitch_dict.get("modifier",0),
-                    octave=pitch_dict.get("octave",0)
-                ))
+                pitch_classes.append(
+                    Pitch(
+                        pitch_class=pitch_dict["pitch_class"],
+                        kwargs=(pitch_dict | options),
+                    )
+                )
+                pitch_text += pitch_dict["text"]
+                chord_notes.append(
+                    note_from_pc(
+                        root=key,
+                        pitch_class=pitch_dict["pitch_class"],
+                        intervals=scale,
+                        modifier=pitch_dict.get("modifier", 0),
+                        octave=pitch_dict.get("octave", 0),
+                    )
+                )
 
             chord = Chord(
-                text=pitch_text, pitch_classes=pitch_classes, notes=chord_notes, kwargs=options
+                text=pitch_text,
+                pitch_classes=pitch_classes,
+                notes=chord_notes,
+                kwargs=options,
             )
             return chord
 
         def _update_item(item, options):
             """Update or create new pitch"""
             if set(("key", "scale")) <= options.keys():
-                if isinstance(item,Pitch):
+                if isinstance(item, Pitch):
+                    item.update_options(options)
+                    item.update_note()
+                if isinstance(item,Rest):
                     item.update_options(options)
                 elif isinstance(item, (RandomPitch, RandomInteger)):
                     item = _create_pitch(item, options)
@@ -420,7 +439,6 @@ class Sequence(Meta):
             self, values=[item for item in self.values if isinstance(item, keep)]
         )
 
-
 @dataclass(kw_only=True)
 class Ziffers(Sequence):
     """Main class for holding options and the current state"""
@@ -429,6 +447,9 @@ class Ziffers(Sequence):
     loop_i: int = 0
     iterator = None
     current: Item = field(default=None)
+
+    def __getitem__(self, index):
+        return self.evaluated_values[index % len(self.evaluated_values)]
 
     def __iter__(self):
         return self
@@ -547,7 +568,7 @@ class RandomInteger(Item):
             self.max = new_max
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self, options: dict=None):
+    def get_value(self, options: dict = None):
         """Evaluate the random value for the generator"""
         return random.randint(self.min, self.max)
 
