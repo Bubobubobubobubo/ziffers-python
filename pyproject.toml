@@ -27,6 +27,9 @@ homepage = "https://github.com/Bubobubobubobubo/ziffers-python"
 documentation = "https://github.com/Bubobubobubobubo/ziffers-python"
 repository = "https://github.com/Bubobubobubobubo/ziffers-python"
 
+[tool.setuptools]
+py-modules = ['ziffers']
+
 [tool.black]
 target_version = ['py311']
 include = '\.pyi?$'
