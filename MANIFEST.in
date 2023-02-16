@@ -1,0 +1,3 @@
+include ziffers/*
+include ziffers/spec/*
+global-include *.lark

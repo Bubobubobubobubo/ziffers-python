@@ -6,10 +6,11 @@ from .mapper import ZiffersTransformer
 
 
 grammar_path = Path(__file__).parent
-grammar = grammar_path / "ziffers.lark"
+grammar_folder = Path.joinpath(grammar_path, "spec")
+grammar_file = Path.joinpath(grammar_folder, "ziffers.lark")
 
 ziffers_parser = Lark.open(
-    grammar,
+    str(grammar_file),
     rel_to=__file__,
     start="root",
     parser="lalr",
