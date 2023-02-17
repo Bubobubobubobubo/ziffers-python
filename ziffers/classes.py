@@ -47,12 +47,18 @@ class Whitespace:
     """Class for whitespace"""
 
     text: str
-    item_type: str = field(default=None, repr=False, init=False)
 
 
 @dataclass(kw_only=True)
 class Modification(Item):
     """Superclass for pitch modifications"""
+
+    key: str
+    value: ...
+
+    def as_options(self):
+        """Return modification as a dict"""
+        return {self.key: self.value}
 
 
 @dataclass(kw_only=True)
@@ -61,7 +67,6 @@ class DurationChange(Modification):
 
     value: float
     key: str = field(default="duration", repr=False, init=False)
-    item_type: str = field(default="change", repr=False, init=False)
 
 
 @dataclass
@@ -70,7 +75,6 @@ class OctaveChange(Modification):
 
     value: int
     key: str = field(default="octave", repr=False, init=False)
-    item_type: str = field(default="change", repr=False, init=False)
 
 
 @dataclass(kw_only=True)
@@ -79,7 +83,6 @@ class OctaveAdd(Modification):
 
     value: int
     key: str = field(default="octave", repr=False, init=False)
-    item_type: str = field(default="add", repr=False, init=False)
 
 
 @dataclass(kw_only=True)
@@ -308,6 +311,23 @@ class Sequence(Meta):
             elif isinstance(item, Meta):  # Filters whitespace
                 yield _update_item(item, options)
 
+        def _update_item(item, options):
+            """Update or create new pitch"""
+            if set(("key", "scale")) <= options.keys():
+                if isinstance(item, Pitch):
+                    item.update_options(options)
+                    item.update_note()
+                if isinstance(item,Rest):
+                    item.update_options(options)
+                elif isinstance(item, (RandomPitch, RandomInteger)):
+                    item = _create_pitch(item, options)
+                elif isinstance(item, Chord):
+                    item.update_options(options)
+                    item.update_notes(options)
+                elif isinstance(item, RomanNumeral):
+                    item = _create_chord_from_roman(item, options)
+            return item
+
         # pylint: disable=locally-disabled, unused-variable
         def _generative_repeat(tree: list, times: int, options: dict):
             """Repeats items and generates new random values"""
@@ -325,9 +345,9 @@ class Sequence(Meta):
         # TODO: Refactor types to isinstance?
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
-            if current.item_type == "change":  # Change options
+            if isinstance(current, OctaveChange, DurationChange):
                 options[current.key] = current.value
-            elif current.item_type == "add":
+            elif isinstance(current, OctaveAdd):
                 if current.key in options:  # Add to existing value
                     options[current.key] += current.value
                 else:  # Create value if not existing
@@ -404,23 +424,6 @@ class Sequence(Meta):
                 kwargs=options
             )
             return chord
-
-        def _update_item(item, options):
-            """Update or create new pitch"""
-            if set(("key", "scale")) <= options.keys():
-                if isinstance(item, Pitch):
-                    item.update_options(options)
-                    item.update_note()
-                if isinstance(item,Rest):
-                    item.update_options(options)
-                elif isinstance(item, (RandomPitch, RandomInteger)):
-                    item = _create_pitch(item, options)
-                elif isinstance(item, Chord):
-                    item.update_options(options)
-                    item.update_notes(options)
-                elif isinstance(item, RomanNumeral):
-                    item = _create_chord_from_roman(item, options)
-            return item
 
         # Start of the main function: Evaluate and flatten the Ziffers object tree
         values = self.evaluated_values if eval_tree else self.values
@@ -729,12 +732,15 @@ class RepeatedSequence(Sequence):
     repeats: RandomInteger | Integer = field(default_factory=Integer(value=1, text="1"))
     wrap_start: str = field(default="[:", repr=False)
     wrap_end: str = field(default=":]", repr=False)
-
+    local_options: dict = None
+    
     evaluated_values: list = None
 
     def __post_init__(self):
         super().__post_init__()
+        self.local_options = DEFAULT_OPTIONS
         self.evaluated_values = list(self.evaluate())
+       
 
     def evaluate(self):
         """Evaluate repeated sequence partially. Leaves Cycles intact."""
@@ -743,5 +749,9 @@ class RepeatedSequence(Sequence):
                 yield from item
             elif isinstance(item, Cyclic):
                 yield item  # Return the cycle
+            elif isinstance(item, Modification):
+                self.local_options = self.local_options | item.as_options()
+            elif isinstance(item, Rest):
+                yield item
             elif isinstance(item, (Event, RandomInteger)):
-                yield Pitch(pitch_class=item.get_value())
+                yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
