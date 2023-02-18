@@ -56,7 +56,7 @@
 
     // Subdivision
     subdivision: "[" subitems "]"
-    subitems: (pitch_class | WS | chord | cycle | subdivision)*
+    subitems: (pitch_class | WS | chord | cycle | subdivision | list | list_op)*
 
     // Control characters modifying future events
     oct_mod: octave WS

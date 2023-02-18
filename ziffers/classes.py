@@ -302,6 +302,12 @@ class Sequence(Meta):
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value()
                     yield from _generative_repeat(item, repeats, options)
+                elif isinstance(item, Subdivision):
+                    items = item.evaluate(options)
+                    if item.has_children:
+                        yield from items.evaluated_values
+                    else:
+                        yield items
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Cyclic):
@@ -342,10 +348,9 @@ class Sequence(Meta):
                 for item in tree:
                     yield from _resolve_item(item, options)
 
-        # TODO: Refactor types to isinstance?
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
-            if isinstance(current, OctaveChange, DurationChange):
+            if isinstance(current, (OctaveChange, DurationChange)):
                 options[current.key] = current.value
             elif isinstance(current, OctaveAdd):
                 if current.key in options:  # Add to existing value
@@ -587,10 +592,38 @@ class RepeatedListSequence(Sequence):
 
 
 @dataclass(kw_only=True)
-class Subdivision(Item):
+class Subdivision(Sequence):
     """Class for subdivisions"""
 
-    values: list[Event]
+    subdiv_length: float = field(default=None, init=False)
+    local_options: dict = None
+    has_children: bool = field(default=False, init=False)
+
+    def evaluate(self, options):
+        self.evaluated_values = list(self.evaluate_tree(options))
+        self.evaluated_values = list(self.evaluate_subdivisions(options))
+        return self
+
+    def evaluate_subdivisions(self, options):
+        self.subdiv_length = len(self.evaluated_values)
+        self.local_options = options.copy()
+        self.local_options["duration"] = options["duration"] / self.subdiv_length
+        for item in self.evaluated_values:
+            if isinstance(item, Subdivision):
+                self.has_children = True
+                yield from item.evaluate_subdivisions(self.local_options)
+            elif isinstance(item, Sequence):
+                yield from item.evaluate_tree(self.local_options)
+            elif isinstance(item, Cyclic):
+                yield item  # Return the cycle
+            elif isinstance(item, Modification):
+                self.local_options = self.local_options | item.as_options()
+            elif isinstance(item, Rest):
+                yield item
+            elif isinstance(item, (Event, RandomInteger)):
+                yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
+
+
 
 
 @dataclass(kw_only=True)
