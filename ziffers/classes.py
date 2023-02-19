@@ -41,6 +41,18 @@ class Item(Meta):
 
     text: str = field(default=None)
 
+    def get_updated_item(self, options: dict):
+        """Get updated item with replaced options
+
+        Args:
+            options (dict): Options as a dict
+
+        Returns:
+            Item: Returns updated item
+        """
+        self.replace_options(options)
+        return self
+
 
 @dataclass(kw_only=True)
 class Whitespace:
@@ -91,9 +103,11 @@ class Event(Item):
 
     duration: float = field(default=None)
 
+
 @dataclass
 class Rest(Event):
     """Class for rests"""
+
 
 @dataclass(kw_only=True)
 class Pitch(Event):
@@ -323,7 +337,7 @@ class Sequence(Meta):
                 if isinstance(item, Pitch):
                     item.update_options(options)
                     item.update_note()
-                if isinstance(item,Rest):
+                if isinstance(item, Rest):
                     item.update_options(options)
                 elif isinstance(item, (RandomPitch, RandomInteger)):
                     item = _create_pitch(item, options)
@@ -426,7 +440,7 @@ class Sequence(Meta):
                 text=pitch_text,
                 pitch_classes=pitch_classes,
                 notes=chord_notes,
-                kwargs=options
+                kwargs=options,
             )
             return chord
 
@@ -447,6 +461,7 @@ class Sequence(Meta):
         return replace(
             self, values=[item for item in self.values if isinstance(item, keep)]
         )
+
 
 @dataclass(kw_only=True)
 class Ziffers(Sequence):
@@ -527,7 +542,7 @@ class Ziffers(Sequence):
 
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
-        return [val.duration for val in self.evaluated_values if isinstance(val, Pitch)]
+        return [val.duration for val in self.evaluated_values if isinstance(val, Event)]
 
     def pairs(self) -> list[tuple]:
         """Return list of pitches and durations"""
@@ -619,11 +634,9 @@ class Subdivision(Sequence):
             elif isinstance(item, Modification):
                 self.local_options = self.local_options | item.as_options()
             elif isinstance(item, Rest):
-                yield item
+                yield item.get_updated_item(self.local_options)
             elif isinstance(item, (Event, RandomInteger)):
                 yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
-
-
 
 
 @dataclass(kw_only=True)
@@ -766,14 +779,13 @@ class RepeatedSequence(Sequence):
     wrap_start: str = field(default="[:", repr=False)
     wrap_end: str = field(default=":]", repr=False)
     local_options: dict = None
-    
+
     evaluated_values: list = None
 
     def __post_init__(self):
         super().__post_init__()
         self.local_options = DEFAULT_OPTIONS
         self.evaluated_values = list(self.evaluate())
-       
 
     def evaluate(self):
         """Evaluate repeated sequence partially. Leaves Cycles intact."""
@@ -785,6 +797,9 @@ class RepeatedSequence(Sequence):
             elif isinstance(item, Modification):
                 self.local_options = self.local_options | item.as_options()
             elif isinstance(item, Rest):
-                yield item
+                yield item.get_updated_item(self.local_options)
             elif isinstance(item, (Event, RandomInteger)):
-                yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
+                new_pitch = Pitch(
+                    pitch_class=item.get_value(), kwargs=self.local_options
+                )
+                yield new_pitch
