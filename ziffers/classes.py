@@ -322,7 +322,7 @@ class Sequence(Meta):
                     if item.has_children:
                         yield from items.evaluated_values
                     else:
-                        yield items
+                        yield item
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Cyclic):
@@ -366,11 +366,10 @@ class Sequence(Meta):
                     yield from _resolve_item(item, options)
 
         def _euclidean_items(euclid: Item, options: dict):
-            """Repeats items with the same random values"""
-            euclid.evaluate(options)   
+            """Loops values from generated euclidean sequence"""
+            euclid.evaluate(options)
             for item in euclid.evaluated_values:
                 yield from _resolve_item(item, options)
-
 
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
@@ -625,7 +624,7 @@ class Subdivision(Sequence):
     has_children: bool = field(default=False, init=False)
 
     def evaluate(self, options):
-        self.evaluated_values = list(self.evaluate_tree(options))
+        self.evaluated_values = list(self.evaluate_tree(options.copy()))
         self.evaluated_values = list(self.evaluate_subdivisions(options))
         return self
 
@@ -637,16 +636,13 @@ class Subdivision(Sequence):
             if isinstance(item, Subdivision):
                 self.has_children = True
                 yield from item.evaluate_subdivisions(self.local_options)
-            elif isinstance(item, Sequence):
-                yield from item.evaluate_tree(self.local_options)
             elif isinstance(item, Cyclic):
                 yield item  # Return the cycle
-            elif isinstance(item, Modification):
-                self.local_options = self.local_options | item.as_options()
             elif isinstance(item, Rest):
                 yield item.get_updated_item(self.local_options)
-            elif isinstance(item, (Event, RandomInteger)):
-                yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
+            elif isinstance(item, Pitch):
+                item.duration = self.local_options["duration"]
+                yield item
 
 
 @dataclass(kw_only=True)
@@ -804,13 +800,13 @@ class Euclid(Item):
         for i in range(self.length):
             if booleans[i]:
                 value = onset_values[on_i % onset_length]
-                on_i+=1
+                on_i += 1
             else:
                 if self.offset is None:
                     value = Rest(duration=options["duration"])
                 else:
                     value = offset_values[off_i % offset_length]
-                off_i+=1
+                off_i += 1
 
             self.evaluated_values.append(value)
 
