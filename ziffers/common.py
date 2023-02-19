@@ -53,3 +53,23 @@ def string_rewrite(axiom: str, rules: dict):
 
     pattern = re.compile("|".join(rules.keys()))
     return pattern.sub(lambda m: next(_apply_rules(m)), axiom)
+
+
+def euclidian_rhythm(pulses: int, length: int, rotate: int = 0):
+    """Calculate Euclidean rhythms. Original algorithm by Thomas Morrill."""
+
+    def _starts_descent(list, index):
+        length = len(list)
+        next_index = (index + 1) % length
+        return list[index] > list[next_index]
+
+    def rotation(l, n):
+        return l[-n:] + l[:-n]
+
+    if pulses >= length:
+        return [True]
+
+    res_list = [pulses * t % length for t in range(-1, length - 1)]
+    bool_list = [_starts_descent(res_list, index) for index in range(length)]
+
+    return rotation(bool_list, rotate)

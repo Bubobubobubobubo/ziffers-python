@@ -5,6 +5,7 @@ import operator
 import random
 from .defaults import DEFAULT_OPTIONS
 from .scale import note_from_pc, midi_to_pitch_class, midi_to_freq, get_scale_length
+from .common import euclidian_rhythm
 
 
 @dataclass(kw_only=True)
@@ -326,6 +327,8 @@ class Sequence(Meta):
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Cyclic):
                 yield from _resolve_item(item.get_value(), options)
+            elif isinstance(item, Euclid):
+                yield from _euclidean_items(item, options)
             elif isinstance(item, Modification):
                 options = _update_options(item, options)
             elif isinstance(item, Meta):  # Filters whitespace
@@ -361,6 +364,13 @@ class Sequence(Meta):
             for i in range(times):
                 for item in tree:
                     yield from _resolve_item(item, options)
+
+        def _euclidean_items(euclid: Item, options: dict):
+            """Repeats items with the same random values"""
+            euclid.evaluate(options)   
+            for item in euclid.evaluated_values:
+                yield from _resolve_item(item, options)
+
 
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
@@ -727,7 +737,9 @@ class ListOperation(Sequence):
                 (right.values if isinstance(right, Sequence) else [right]), left
             )
             left = [
-                Pitch(pitch_class=operation(x.get_value(), y.get_value()), kwargs=options)
+                Pitch(
+                    pitch_class=operation(x.get_value(), y.get_value()), kwargs=options
+                )
                 for (x, y) in pairs
             ]
         return left
@@ -767,9 +779,40 @@ class Euclid(Item):
 
     pulses: int
     length: int
-    onset: list
-    offset: list = field(default=None)
-    rotate: int = field(default=None)
+    onset: ListSequence
+    offset: ListSequence = field(default=None)
+    rotate: int = field(default=0)
+    evaluated_values: list = field(default=None)
+
+    def evaluate(self, options):
+        onset_values = [
+            val for val in self.onset.values if not isinstance(val, Whitespace)
+        ]
+        onset_length = len(onset_values)
+        booleans = euclidian_rhythm(self.pulses, self.length, self.rotate)
+        self.evaluated_values = []
+
+        if self.offset is not None:
+            offset_values = [
+                val for val in self.offset.values if not isinstance(val, Whitespace)
+            ]
+            offset_length = len(offset_values)
+
+        on_i = 0
+        off_i = 0
+
+        for i in range(self.length):
+            if booleans[i]:
+                value = onset_values[on_i % onset_length]
+                on_i+=1
+            else:
+                if self.offset is None:
+                    value = Rest(duration=options["duration"])
+                else:
+                    value = offset_values[off_i % offset_length]
+                off_i+=1
+
+            self.evaluated_values.append(value)
 
 
 @dataclass(kw_only=True)

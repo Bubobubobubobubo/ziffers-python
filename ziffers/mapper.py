@@ -340,10 +340,10 @@ class ZiffersTransformer(Transformer):
     def euclid(self, items):
         """Parse euclid notation"""
         params = items[1][1:-1].split(",")
-        init = {"onset": items[0], "pulses": params[0], "length": params[1]}
+        init = {"onset": items[0], "pulses": int(params[0]), "length": int(params[1])}
         text = items[0].text + items[1]
         if len(params) > 2:
-            init["rotate"] = params[2]
+            init["rotate"] = int(params[2])
         if len(items) > 2:
             init["offset"] = items[2]
             text = text + items[2].text
