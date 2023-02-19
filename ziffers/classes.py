@@ -778,13 +778,12 @@ class RepeatedSequence(Sequence):
     repeats: RandomInteger | Integer = field(default_factory=Integer(value=1, text="1"))
     wrap_start: str = field(default="[:", repr=False)
     wrap_end: str = field(default=":]", repr=False)
-    local_options: dict = None
+    local_options: dict = field(default_factory=dict, init=False)
 
     evaluated_values: list = None
 
     def __post_init__(self):
         super().__post_init__()
-        self.local_options = DEFAULT_OPTIONS
         self.evaluated_values = list(self.evaluate())
 
     def evaluate(self):
@@ -799,7 +798,4 @@ class RepeatedSequence(Sequence):
             elif isinstance(item, Rest):
                 yield item.get_updated_item(self.local_options)
             elif isinstance(item, (Event, RandomInteger)):
-                new_pitch = Pitch(
-                    pitch_class=item.get_value(), kwargs=self.local_options
-                )
-                yield new_pitch
+                yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
