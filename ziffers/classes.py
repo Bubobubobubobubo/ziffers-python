@@ -322,7 +322,7 @@ class Sequence(Meta):
                     if item.has_children:
                         yield from items.evaluated_values
                     else:
-                        yield item
+                        yield from _loop_items(item, options)
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Cyclic):
@@ -370,6 +370,10 @@ class Sequence(Meta):
             euclid.evaluate(options)
             for item in euclid.evaluated_values:
                 yield from _resolve_item(item, options)
+
+        def _loop_items(items, options):
+            for item in items:
+               yield from _resolve_item(item, options) 
 
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
