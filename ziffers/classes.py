@@ -309,7 +309,7 @@ class Sequence(Meta):
             """Resolve cyclic value"""
             if isinstance(item, Sequence):
                 if isinstance(item, ListOperation):
-                    yield from item.evaluate_tree(options, True)
+                    yield from item.evaluate(options)
                 elif isinstance(item, RepeatedSequence):
                     repeats = item.repeats.get_value()
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
@@ -694,7 +694,8 @@ class ListOperation(Sequence):
         super().__post_init__()
         self.evaluated_values = self.evaluate()
 
-    def evaluate(self):
+    # pylint: disable=locally-disabled, dangerous-default-value
+    def evaluate(self, options=DEFAULT_OPTIONS):
         """Evaluates the operation"""
 
         def filter_operation(input_list):
@@ -726,7 +727,7 @@ class ListOperation(Sequence):
                 (right.values if isinstance(right, Sequence) else [right]), left
             )
             left = [
-                Pitch(pitch_class=operation(x.get_value(), y.get_value()))
+                Pitch(pitch_class=operation(x.get_value(), y.get_value()), kwargs=options)
                 for (x, y) in pairs
             ]
         return left
@@ -790,9 +791,12 @@ class RepeatedSequence(Sequence):
         """Evaluate repeated sequence partially. Leaves Cycles intact."""
         for item in self.values:
             if isinstance(item, Sequence):
-                yield from item
+                if isinstance(item, ListOperation):
+                    yield from item.evaluate_tree(self.local_options, True)
+                else:
+                    yield from item
             elif isinstance(item, Cyclic):
-                yield item  # Return the cycle
+                yield item  # Return the cycle instead of values
             elif isinstance(item, Modification):
                 self.local_options = self.local_options | item.as_options()
             elif isinstance(item, Rest):
