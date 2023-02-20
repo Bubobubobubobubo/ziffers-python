@@ -213,6 +213,7 @@ class Chord(Event):
 
     pitch_classes: list[Pitch] = field(default=None)
     notes: list[int] = field(default=None)
+    freqs: list[float] = field(default=None, init=False)
 
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
@@ -221,11 +222,16 @@ class Chord(Event):
     def update_notes(self, options):
         """Update notes"""
         notes = []
+        freqs = []
+
         for pitch in self.pitch_classes:
             pitch.update_options(options)
             pitch.update_note()
             notes.append(pitch.note)
+            freqs.append(pitch.freq)
+
         self.notes = notes
+        self.freqs = freqs
 
 
 @dataclass(kw_only=True)
@@ -373,7 +379,7 @@ class Sequence(Meta):
 
         def _loop_items(items, options):
             for item in items:
-               yield from _resolve_item(item, options) 
+                yield from _resolve_item(item, options)
 
         def _update_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
@@ -481,6 +487,7 @@ class Ziffers(Sequence):
     """Main class for holding options and the current state"""
 
     options: dict = field(default_factory=DEFAULT_OPTIONS)
+    start_options: dict = None
     loop_i: int = 0
     iterator = None
     current: Item = field(default=None)
@@ -505,12 +512,13 @@ class Ziffers(Sequence):
         else:
             self.options = DEFAULT_OPTIONS
 
+        self.start_options = self.options.copy()
         self.evaluated_values = list(self.evaluate_tree(self.options))
         self.iterator = iter(self.evaluated_values)
 
     def re_eval(self, options=None):
         """Re-evaluate the iterator"""
-        self.options.update(DEFAULT_OPTIONS)
+        self.options = self.start_options.copy()
         if options:
             self.options.update(options)
         self.evaluated_values = list(self.evaluate_tree(self.options))
@@ -628,11 +636,13 @@ class Subdivision(Sequence):
     has_children: bool = field(default=False, init=False)
 
     def evaluate(self, options):
+        """Evaluate tree and then calculate lengths using subdivision"""
         self.evaluated_values = list(self.evaluate_tree(options.copy()))
         self.evaluated_values = list(self.evaluate_subdivisions(options))
         return self
 
     def evaluate_subdivisions(self, options):
+        """Calculate new durations by dividing with the number of items in the sequence"""
         self.subdiv_length = len(self.evaluated_values)
         self.local_options = options.copy()
         self.local_options["duration"] = options["duration"] / self.subdiv_length
@@ -785,6 +795,7 @@ class Euclid(Item):
     evaluated_values: list = field(default=None)
 
     def evaluate(self, options):
+        """Evaluate values using euclidean spread"""
         onset_values = [
             val for val in self.onset.values if not isinstance(val, Whitespace)
         ]
