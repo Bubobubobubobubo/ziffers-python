@@ -71,7 +71,7 @@ class ZiffersTransformer(Transformer):
     def range(self, item) -> Range:
         """Parses range syntax"""
         val = item[0].split("..")
-        return Range(start=val[0], end=val[1], text=item[0])
+        return Range(start=int(val[0]), end=int(val[1]), text=item[0].value)
 
     def cycle(self, items) -> Cyclic:
         """Parses cycle"""

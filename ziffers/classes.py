@@ -328,6 +328,8 @@ class Sequence(Meta):
                     yield item
                 else:
                     yield from item.evaluate_tree(options)
+            elif isinstance(item, Range):
+                    yield from item.evaluate(options)
             elif isinstance(item, Cyclic):
                 yield from _resolve_item(item.get_value(), options)
             elif isinstance(item, Euclid):
@@ -689,6 +691,10 @@ class Range(Item):
     start: int = field(default=None)
     end: int = field(default=None)
 
+    def evaluate(self, options):
+        for i in range(self.start,self.end+1):
+            yield Pitch(pitch_class=i, kwargs=options)
+
 
 @dataclass(kw_only=True)
 class Operator(Item):
@@ -714,6 +720,7 @@ class ListOperation(Sequence):
         def filter_operation(input_list):
             flattened_list = []
 
+            # TODO: ADD Options here and evaluate events?
             for item in input_list:
                 if isinstance(item, (list, Sequence)):
                     if isinstance(item, ListOperation):
@@ -740,6 +747,7 @@ class ListOperation(Sequence):
                 (right.values if isinstance(right, Sequence) else [right]), left
             )
             left = [
+                #TODO: Get options from x value?
                 Pitch(
                     pitch_class=operation(x.get_value(options), y.get_value(options)),
                     kwargs=options,
@@ -849,5 +857,7 @@ class RepeatedSequence(Sequence):
                 self.local_options = self.local_options | item.as_options()
             elif isinstance(item, Rest):
                 yield item.get_updated_item(self.local_options)
+            elif isinstance(item, Range):
+                    yield from item.evaluate(options)
             elif isinstance(item, (Event, RandomInteger)):
                 yield Pitch(pitch_class=item.get_value(self.local_options), kwargs=self.local_options)

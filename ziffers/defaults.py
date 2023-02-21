@@ -49,6 +49,10 @@ OPERATORS = {
     "*": operator.mul,
     "/": operator.truediv,
     "%": operator.mod,
+    "|": operator.or_,
+    "&": operator.and_,
+    "<<": operator.ilshift,
+    ">>": operator.irshift
 }
 
 

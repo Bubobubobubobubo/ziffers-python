@@ -43,7 +43,7 @@
     // Right recursive list operation
     list_op: list (operator right_op)+
     right_op: list | number
-    operator: /([\+\-\*\/%]|<<|>>)/
+    operator: /([\+\-\*\/%\|\&]|<<|>>)/
 
     // Euclidean cycles
     // TODO: Support randomization etc.
@@ -56,7 +56,7 @@
 
     // Subdivision
     subdivision: "[" subitems "]"
-    subitems: (pitch_class | random_integer | random_pitch | rest | oct_mod | oct_change | WS | chord | named_roman | cycle | subdivision | list | list_op)*
+    subitems: (pitch_class | random_integer | random_pitch | rest | oct_mod | oct_change | WS | chord | named_roman | cycle | subdivision | list | list_op | range)*
 
     // Control characters modifying future events
     oct_mod: octave WS
@@ -67,7 +67,7 @@
 
     // Generative rules
     random_integer: /\(-?[0-9]+,-?[0-9]+\)/
-    range: /-?[0-9]\.\.-?[0-9]/
+    range: /-?[0-9]+\.\.-?[0-9]+/
     cycle: "<" sequence ">"
     random_pitch: /(\?)(?!\d)/
     random_percent: /(%)(?!\d)/
