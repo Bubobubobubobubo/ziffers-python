@@ -71,7 +71,7 @@ def test_pitch_octaves(pattern: str, expected: list):
     [
        ("w [1 [2 3]]", [0.5, 0.25, 0.25]),
        ("1.0 [1 [2 3]] 4 [3 [4 5]]", [0.5, 0.25, 0.25, 1.0, 0.5, 0.25, 0.25]),
-       ("0.5 (0 0.25 3)+1", [0.5, 0.25])
+       ("0.5 (0 0.25 3)+1", [0.5, 0.5])
     ]
 )
 def test_subdivisions(pattern: str, expected: list):

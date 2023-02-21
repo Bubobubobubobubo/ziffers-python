@@ -1,6 +1,7 @@
 """ Ziffers classes for the parsed notation """
 from dataclasses import dataclass, field, replace, asdict
 from itertools import product, islice, cycle
+from math import floor
 import operator
 import random
 from .defaults import DEFAULT_OPTIONS
@@ -487,12 +488,20 @@ class Ziffers(Sequence):
 
     options: dict = field(default_factory=DEFAULT_OPTIONS)
     start_options: dict = None
-    loop_i: int = 0
+    loop_i: int = field(default=0, init=False)
+    cycle_i: int = field(default=0, init=False)
     iterator = None
     current: Item = field(default=None)
+    cycle_length: int = field(default=0, init=False)
 
     def __getitem__(self, index):
-        return self.evaluated_values[index % len(self.evaluated_values)]
+        loop_i = index % self.cycle_length
+        self.loop_i = loop_i
+        new_cycle = floor(index / self.cycle_length)
+        if new_cycle > self.cycle_i or new_cycle < self.cycle_i:
+            self.re_eval(self.options)
+            self.cycle_i = new_cycle
+        return self.evaluated_values[loop_i]
 
     def __iter__(self):
         return self
@@ -525,6 +534,7 @@ class Ziffers(Sequence):
         self.evaluated_values = list(self.evaluate_tree(options))
         self.evaluated_values = list(self.post_check())
         self.iterator = iter(self.evaluated_values)
+        self.cycle_length = len(self.evaluated_values)
 
     def post_check(self):
         for item in self.evaluated_values:
