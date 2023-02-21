@@ -2,9 +2,12 @@
 import pytest
 from ziffers import zparse
 
+# pylint: disable=missing-function-docstring, line-too-long, invalid-name
 
 def test_can_parse():
     expressions = [
+        "0 1 2 3 4 5 6 7 8 9 T E",
+        "023 i iv iv^min",
         "[1 [2 3]]",
         "(1 (1,3) 1..3)",
         "_^ q _qe^3 qww_4 _123 <1 2>",
@@ -12,6 +15,8 @@ def test_can_parse():
         "2 qe2 e4",
         "q 2 <3 343>",
         "q (2 <3 343 (3 4)>)",
+        "? 1 2",
+        "(? 2 ? 4)+(1,4)"
     ]
     results = []
     for expression in expressions:
@@ -49,6 +54,36 @@ def test_parsing_text(pattern: str):
 def test_pitch_classes(pattern: str, expected: list):
     assert zparse(pattern).pitch_classes() == expected
 
-# TODO: Add tests for octaves
-#        ("__6 _0 _1 _2 _3 _4 _5 _6 0 1 2 3 4 5 6 ^0 ^1 ^2 ^3 ^4 ^5 ^6 ^^0", [-2, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2]),
-#        ("_ 1 _2 <3>3 ^^4", [-1,-2,3,-1]),
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+       ("__6 _0 _1 _2 _3 _4 _5 _6 0 1 2 3 4 5 6 ^0 ^1 ^2 ^3 ^4 ^5 ^6 ^^0", [-2, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2]),
+       ("_ 1 _2 <3>3 ^^4", [-1, -1, 3, 2]), 
+    ]
+)
+def test_pitch_octaves(pattern: str, expected: list):
+    assert zparse(pattern).octaves() == expected
+
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+       ("w [1 [2 3]]", [0.5, 0.25, 0.25]),
+       ("1.0 [1 [2 3]] 4 [3 [4 5]]", [0.5, 0.25, 0.25, 1.0, 0.5, 0.25, 0.25]),
+       ("0.5 (0 0.25 3)+1", [0.5, 0.25])
+    ]
+)
+def test_subdivisions(pattern: str, expected: list):
+    assert zparse(pattern).durations() == expected
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+       ("[: 1 [: 2 :] 3 :]", [62, 64, 64, 65, 62, 64, 64, 65]),
+       ("(: 1 (: 2 :) 3 :)", [62, 64, 64, 65, 62, 64, 64, 65])
+    ]
+)
+def test_repeats(pattern: str, expected: list):
+    assert zparse(pattern).notes() == expected
+

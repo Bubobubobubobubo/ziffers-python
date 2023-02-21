@@ -92,7 +92,8 @@ class ZiffersTransformer(Transformer):
 
     def pitch(self, items):
         """Return pitch class info"""
-        return {"pitch_class": int(items[0].value), "text": items[0].value}
+        text_value = items[0].value.replace("T","10").replace("E","11")
+        return {"pitch_class": int(text_value), "text": items[0].value}
 
     def prefix(self, items):
         """Return prefix"""

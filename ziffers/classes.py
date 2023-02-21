@@ -174,7 +174,7 @@ class Pitch(Event):
         self.freq = freq
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self) -> int:
+    def get_value(self, options) -> int:
         """Returns the pitch class
 
         Returns:
@@ -318,17 +318,14 @@ class Sequence(Meta):
                 if isinstance(item, ListOperation):
                     yield from item.evaluate(options)
                 elif isinstance(item, RepeatedSequence):
-                    repeats = item.repeats.get_value()
+                    repeats = item.repeats.get_value(options)
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
-                    repeats = item.repeats.get_value()
+                    repeats = item.repeats.get_value(options)
                     yield from _generative_repeat(item, repeats, options)
                 elif isinstance(item, Subdivision):
-                    items = item.evaluate(options)
-                    if item.has_children:
-                        yield from items.evaluated_values
-                    else:
-                        yield from _loop_items(item, options)
+                    item.evaluated_values = list(item.evaluate_tree(options))
+                    yield item
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Cyclic):
@@ -513,16 +510,26 @@ class Ziffers(Sequence):
             self.options = DEFAULT_OPTIONS
 
         self.start_options = self.options.copy()
-        self.evaluated_values = list(self.evaluate_tree(self.options))
-        self.iterator = iter(self.evaluated_values)
+        self.init_tree(self.options)
 
     def re_eval(self, options=None):
         """Re-evaluate the iterator"""
         self.options = self.start_options.copy()
         if options:
             self.options.update(options)
-        self.evaluated_values = list(self.evaluate_tree(self.options))
+        self.init_tree(self.options)
+
+    def init_tree(self, options):
+        self.evaluated_values = list(self.evaluate_tree(options))
+        self.evaluated_values = list(self.post_check())
         self.iterator = iter(self.evaluated_values)
+
+    def post_check(self):
+        for item in self.evaluated_values:
+            if isinstance(item, Subdivision):
+                yield from item.evaluate_durations()
+            else:
+                yield item
 
     def get_list(self):
         """Return list"""
@@ -593,7 +600,7 @@ class Integer(Item):
     value: int
 
     # pylint: disable=locally-disabled, unused-argument
-    def get_value(self):
+    def get_value(self, options):
         """Return value of the integer"""
         return self.value
 
@@ -631,31 +638,17 @@ class RepeatedListSequence(Sequence):
 class Subdivision(Sequence):
     """Class for subdivisions"""
 
-    subdiv_length: float = field(default=None, init=False)
-    local_options: dict = None
-    has_children: bool = field(default=False, init=False)
-
-    def evaluate(self, options):
-        """Evaluate tree and then calculate lengths using subdivision"""
-        self.evaluated_values = list(self.evaluate_tree(options.copy()))
-        self.evaluated_values = list(self.evaluate_subdivisions(options))
-        return self
-
-    def evaluate_subdivisions(self, options):
+    def evaluate_durations(self, duration=None):
         """Calculate new durations by dividing with the number of items in the sequence"""
-        self.subdiv_length = len(self.evaluated_values)
-        self.local_options = options.copy()
-        self.local_options["duration"] = options["duration"] / self.subdiv_length
+        if duration is None:
+            duration = self.evaluated_values[0].duration
+        new_d = duration / len(self.evaluated_values)
         for item in self.evaluated_values:
             if isinstance(item, Subdivision):
-                self.has_children = True
-                yield from item.evaluate_subdivisions(self.local_options)
-            elif isinstance(item, Cyclic):
-                yield item  # Return the cycle
-            elif isinstance(item, Rest):
-                yield item.get_updated_item(self.local_options)
-            elif isinstance(item, Pitch):
-                item.duration = self.local_options["duration"]
+                yield from item.evaluate_durations(new_d)
+            if isinstance(item, Event):
+                if duration is not None:
+                    item.duration = new_d
                 yield item
 
 
@@ -748,7 +741,8 @@ class ListOperation(Sequence):
             )
             left = [
                 Pitch(
-                    pitch_class=operation(x.get_value(), y.get_value()), kwargs=options
+                    pitch_class=operation(x.get_value(options), y.get_value(options)),
+                    kwargs=options,
                 )
                 for (x, y) in pairs
             ]
@@ -856,4 +850,4 @@ class RepeatedSequence(Sequence):
             elif isinstance(item, Rest):
                 yield item.get_updated_item(self.local_options)
             elif isinstance(item, (Event, RandomInteger)):
-                yield Pitch(pitch_class=item.get_value(), kwargs=self.local_options)
+                yield Pitch(pitch_class=item.get_value(self.local_options), kwargs=self.local_options)
