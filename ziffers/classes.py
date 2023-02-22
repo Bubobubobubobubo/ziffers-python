@@ -868,6 +868,8 @@ class RepeatedSequence(Sequence):
             if isinstance(item, Sequence):
                 if isinstance(item, ListOperation):
                     yield from item.evaluate_tree(self.local_options, True)
+                elif isinstance(item, RepeatedSequence):
+                    yield item
                 else:
                     yield from item
             elif isinstance(item, Cyclic):
