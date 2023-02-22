@@ -737,6 +737,8 @@ class ListOperation(Sequence):
                         flattened_list.extend(item.evaluated_values)
                     else:
                         flattened_list.append(filter_operation(item))
+                elif isinstance(item, Range):
+                    flattened_list.extend(list(item.evaluate(options)))
                 elif isinstance(item, (Event, RandomInteger, Integer, Cyclic)):
                     flattened_list.append(item)
 

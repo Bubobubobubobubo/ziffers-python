@@ -1,5 +1,6 @@
 """ Module for the parser """
 from pathlib import Path
+from functools import lru_cache
 from lark import Lark
 from .classes import Ziffers
 from .mapper import ZiffersTransformer
@@ -29,7 +30,7 @@ def parse_expression(expr: str) -> Ziffers:
     """
     return ziffers_parser.parse(expr)
 
-
+@lru_cache
 def zparse(expr: str, **opts) -> Ziffers:
     """Parses ziffers expression with options
 
