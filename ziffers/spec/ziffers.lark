@@ -30,8 +30,10 @@
     ?roman_number: /iv|v|v?i{1,3}/
   
     // Valid as integer
-    number: NUMBER | random_integer | cyclic_number
-    cyclic_number: "<" number (WS number)* ">"
+    number: NUMBER | random_integer | cycle
+    
+    // CYCLIC NUMBERS NOT IN USE. NUMBERS MUST BE VALIDATED FROM FULL CYCLES!
+    // cyclic_number: "<" number (WS number)* ">"
 
     // Repeats
     repeat: "[:" sequence ":" [number] "]"

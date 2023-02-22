@@ -320,7 +320,11 @@ class Sequence(Meta):
                     yield from item.evaluate(options)
                 elif isinstance(item, RepeatedSequence):
                     item.evaluate_values(options)
-                    repeats = item.repeats.get_value(options)
+                    # TODO: Refactor this. Parsing and validating cycles for integers only?
+                    if isinstance(item.repeats, Cyclic):
+                        repeats = item.repeats.get_value().get_value(options)
+                    else:
+                        repeats = item.repeats.get_value(options)
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value(options)
@@ -496,13 +500,14 @@ class Ziffers(Sequence):
     cycle_length: int = field(default=0, init=False)
 
     def __getitem__(self, index):
-        loop_i = index % self.cycle_length
-        self.loop_i = loop_i
+        self.loop_i = index % self.cycle_length
         new_cycle = floor(index / self.cycle_length)
         if new_cycle > self.cycle_i or new_cycle < self.cycle_i:
             self.re_eval(self.options)
             self.cycle_i = new_cycle
-        return self.evaluated_values[loop_i]
+            self.cycle_length = len(self.evaluated_values)
+            self.loop_i = index % self.cycle_length
+        return self.evaluated_values[self.loop_i]
 
     def __iter__(self):
         return self
@@ -733,10 +738,6 @@ class ListOperation(Sequence):
 
     evaluated_values: list = None
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.evaluated_values = self.evaluate()
-
     def evaluate(self, options=DEFAULT_OPTIONS.copy()):
         """Evaluates the operation"""
 
@@ -750,9 +751,15 @@ class ListOperation(Sequence):
                         flattened_list.extend(item.evaluated_values)
                     else:
                         flattened_list.append(filter_operation(item))
+                elif isinstance(item, Cyclic):
+                    value = item.get_value()
+                    if isinstance(value,Sequence):
+                        flattened_list.extend(filter_operation(value))
+                    elif isinstance(value, (Event, RandomInteger, Integer)):
+                        flattened_list.append(value)
                 elif isinstance(item, Range):
                     flattened_list.extend(list(item.evaluate(options)))
-                elif isinstance(item, (Event, RandomInteger, Integer, Cyclic)):
+                elif isinstance(item, (Event, RandomInteger, Integer)):
                     flattened_list.append(item)
 
             if isinstance(input_list, Sequence):
@@ -762,7 +769,9 @@ class ListOperation(Sequence):
 
         operators = self.values[1::2]  # Fetch every second operator element
         values = self.values[::2]  # Fetch every second list element
-        values = filter_operation(values)  # Filter out crap
+        values = filter_operation(values)  # Filter out 
+        if len(values)==1:
+            return values[0] # If right hand doesnt contain anything sensible
         left = values[0]  # Start results with the first array
 
         for i, operand in enumerate(operators):
