@@ -702,8 +702,15 @@ class Range(Item):
     end: int = field(default=None)
 
     def evaluate(self, options):
-        for i in range(self.start,self.end+1):
-            yield Pitch(pitch_class=i, kwargs=options)
+        if self.start<self.end:
+            for i in range(self.start,self.end+1):
+                yield Pitch(pitch_class=i, kwargs=options)
+        elif self.start>self.end:
+            for i in reversed(range(self.end,self.start+1)):
+                yield Pitch(pitch_class=i, kwargs=options)
+        else:
+            yield Pitch(pitch_class=self.start, kwargs=options)
+
 
 
 @dataclass(kw_only=True)
