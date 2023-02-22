@@ -1,7 +1,8 @@
 """ Default options for Ziffers """
 import operator
+from types import MappingProxyType
 
-DEFAULT_DURS = {
+DEFAULT_DURS = MappingProxyType({
     "m": 8.0,  # 15360/1920
     "k": 10240 / 1920,  # ~5.333
     "l": 4.0,  # 7680/1920
@@ -37,13 +38,18 @@ DEFAULT_DURS = {
     "j": 15 / 1920,  # ~0.0078 - 1/128
     "o": 8 / 1920,  # ~0.00416
     "z": 0.0,  # 0
-}
+})
 
 DEFAULT_OCTAVE = 4
 
-DEFAULT_OPTIONS = {"octave": 0, "duration": 0.25, "key": "C4", "scale": "IONIAN"}
+DEFAULT_OPTIONS = MappingProxyType({
+        "octave": 0, 
+        "duration": 0.25, 
+        "key": "C4", 
+        "scale": "IONIAN"
+    })
 
-OPERATORS = {
+OPERATORS = MappingProxyType({
     "+": operator.add,
     "-": operator.sub,
     "*": operator.mul,
@@ -53,10 +59,10 @@ OPERATORS = {
     "&": operator.and_,
     "<<": operator.ilshift,
     ">>": operator.irshift
-}
+})
 
 
-NOTES_TO_INTERVALS = {
+NOTES_TO_INTERVALS = MappingProxyType({
     "C": 0,
     "Cs": 1,
     "D": 2,
@@ -69,9 +75,9 @@ NOTES_TO_INTERVALS = {
     "A": 9,
     "Bb": 10,
     "B": 11,
-}
+})
 
-INTERVALS_TO_NOTES = {
+INTERVALS_TO_NOTES = MappingProxyType({
     0: "C",
     1: "Cs",
     2: "D",
@@ -84,9 +90,9 @@ INTERVALS_TO_NOTES = {
     9: "A",
     10: "Bb",
     11: "B",
-}
+})
 
-CIRCLE_OF_FIFTHS = [
+CIRCLE_OF_FIFTHS = (
     "Gb",
     "Cs",
     "Ab",
@@ -100,15 +106,15 @@ CIRCLE_OF_FIFTHS = [
     "E",
     "B",
     "Fs",
-]
+)
 
-MODIFIERS = {
+MODIFIERS = MappingProxyType({
     "#": 1,
     "b": -1,
     "s": 1,
-}
+})
 
-ROMANS = {"i": 1, "v": 5, "x": 10, "l": 50, "c": 100, "d": 500, "m": 1000}
+ROMANS = MappingProxyType({"i": 1, "v": 5, "x": 10, "l": 50, "c": 100, "d": 500, "m": 1000})
 
 # pylint: disable=locally-disabled, too-many-lines
 

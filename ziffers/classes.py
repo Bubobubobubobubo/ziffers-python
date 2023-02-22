@@ -319,18 +319,19 @@ class Sequence(Meta):
                 if isinstance(item, ListOperation):
                     yield from item.evaluate(options)
                 elif isinstance(item, RepeatedSequence):
+                    item.evaluate_values(options)
                     repeats = item.repeats.get_value(options)
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value(options)
                     yield from _generative_repeat(item, repeats, options)
                 elif isinstance(item, Subdivision):
-                    item.evaluated_values = list(item.evaluate_tree(options))
+                    item.evaluate_values(options)
                     yield item
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, Range):
-                    yield from item.evaluate(options)
+                yield from item.evaluate(options)
             elif isinstance(item, Cyclic):
                 yield from _resolve_item(item.get_value(), options)
             elif isinstance(item, Euclid):
@@ -486,7 +487,7 @@ class Sequence(Meta):
 class Ziffers(Sequence):
     """Main class for holding options and the current state"""
 
-    options: dict = field(default_factory=DEFAULT_OPTIONS)
+    options: dict = field(default_factory=DEFAULT_OPTIONS.copy())
     start_options: dict = None
     loop_i: int = field(default=0, init=False)
     cycle_i: int = field(default=0, init=False)
@@ -514,11 +515,11 @@ class Ziffers(Sequence):
     # pylint: disable=locally-disabled, dangerous-default-value
     def init_opts(self, options=None):
         """Evaluate the Ziffers tree using the options"""
-        self.options.update(DEFAULT_OPTIONS)
+        self.options.update(DEFAULT_OPTIONS.copy())
         if options:
             self.options.update(options)
         else:
-            self.options = DEFAULT_OPTIONS
+            self.options = DEFAULT_OPTIONS.copy()
 
         self.start_options = self.options.copy()
         self.init_tree(self.options)
@@ -531,12 +532,14 @@ class Ziffers(Sequence):
         self.init_tree(self.options)
 
     def init_tree(self, options):
+        """Initialize evaluated values and perform post-evaluation"""
         self.evaluated_values = list(self.evaluate_tree(options))
-        self.evaluated_values = list(self.post_check())
+        self.evaluated_values = list(self.post_evaluation())
         self.iterator = iter(self.evaluated_values)
         self.cycle_length = len(self.evaluated_values)
 
-    def post_check(self):
+    def post_evaluation(self):
+        """Post-evaluation performs evaluation that can only be done after initial evaluation"""
         for item in self.evaluated_values:
             if isinstance(item, Subdivision):
                 yield from item.evaluate_durations()
@@ -568,7 +571,7 @@ class Ziffers(Sequence):
         Args:
             options (dict): Options as a dict
         """
-        self.options = DEFAULT_OPTIONS | options
+        self.options = DEFAULT_OPTIONS.copy() | options
 
     def pitch_classes(self) -> list[int]:
         """Return list of pitch classes as ints"""
@@ -650,6 +653,10 @@ class RepeatedListSequence(Sequence):
 class Subdivision(Sequence):
     """Class for subdivisions"""
 
+    def evaluate_values(self, options):
+        """Evaluate values and store to evaluated_values"""
+        self.evaluated_values = list(self.evaluate_tree(options))
+
     def evaluate_durations(self, duration=None):
         """Calculate new durations by dividing with the number of items in the sequence"""
         if duration is None:
@@ -702,15 +709,15 @@ class Range(Item):
     end: int = field(default=None)
 
     def evaluate(self, options):
-        if self.start<self.end:
-            for i in range(self.start,self.end+1):
+        """Evaluates range and generates a generator of Pitches"""
+        if self.start < self.end:
+            for i in range(self.start, self.end + 1):
                 yield Pitch(pitch_class=i, kwargs=options)
-        elif self.start>self.end:
-            for i in reversed(range(self.end,self.start+1)):
+        elif self.start > self.end:
+            for i in reversed(range(self.end, self.start + 1)):
                 yield Pitch(pitch_class=i, kwargs=options)
         else:
             yield Pitch(pitch_class=self.start, kwargs=options)
-
 
 
 @dataclass(kw_only=True)
@@ -730,8 +737,7 @@ class ListOperation(Sequence):
         super().__post_init__()
         self.evaluated_values = self.evaluate()
 
-    # pylint: disable=locally-disabled, dangerous-default-value
-    def evaluate(self, options=DEFAULT_OPTIONS):
+    def evaluate(self, options=DEFAULT_OPTIONS.copy()):
         """Evaluates the operation"""
 
         def filter_operation(input_list):
@@ -766,7 +772,7 @@ class ListOperation(Sequence):
                 (right.values if isinstance(right, Sequence) else [right]), left
             )
             left = [
-                #TODO: Get options from x value?
+                # TODO: Get options from x value?
                 Pitch(
                     pitch_class=operation(x.get_value(options), y.get_value(options)),
                     kwargs=options,
@@ -858,12 +864,13 @@ class RepeatedSequence(Sequence):
 
     evaluated_values: list = None
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.evaluated_values = list(self.evaluate())
+    def evaluate_values(self, options):
+        """Evaluate values and store to evaluated_values"""
+        self.evaluated_values = list(self.evaluate(options))
 
-    def evaluate(self):
+    def evaluate(self, options: dict):
         """Evaluate repeated sequence partially. Leaves Cycles intact."""
+        self.local_options = options.copy()
         for item in self.values:
             if isinstance(item, Sequence):
                 if isinstance(item, ListOperation):
@@ -879,6 +886,9 @@ class RepeatedSequence(Sequence):
             elif isinstance(item, Rest):
                 yield item.get_updated_item(self.local_options)
             elif isinstance(item, Range):
-                    yield from item.evaluate(options)
+                yield from item.evaluate(self.local_options)
             elif isinstance(item, (Event, RandomInteger)):
-                yield Pitch(pitch_class=item.get_value(self.local_options), kwargs=self.local_options)
+                yield Pitch(
+                    pitch_class=item.get_value(self.local_options),
+                    kwargs=self.local_options,
+                )
