@@ -12,7 +12,8 @@
     modifier: /[#b]/
 
     // Variable assignment
-    assignment: variable "=" (list | pitch_class | random_integer | random_pitch | cycle | list_op)
+    assignment: variable ass_op (list | pitch_class | random_integer | random_pitch | cycle | list_op)
+    ass_op: /[=~]/
     variable: /[A-Z]/
 
     // Durations

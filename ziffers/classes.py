@@ -4,6 +4,7 @@ from itertools import product, islice, cycle
 from math import floor
 import operator
 import random
+from copy import deepcopy
 from .defaults import DEFAULT_OPTIONS
 from .scale import note_from_pc, midi_to_pitch_class, midi_to_freq, get_scale_length
 from .common import euclidian_rhythm
@@ -270,16 +271,22 @@ class Function(Event):
 
     run: str = field(default=None)
 
+
 @dataclass(kw_only=True)
 class VariableAssignment(Item):
     """Class for defining variables"""
+
     variable: str
     value: Item
+    pre_eval: bool
+
 
 @dataclass(kw_only=True)
 class Variable(Item):
     """Class for using variables"""
+
     name: str
+
 
 @dataclass(kw_only=True)
 class Sequence(Meta):
@@ -345,10 +352,17 @@ class Sequence(Meta):
                 else:
                     yield from item.evaluate_tree(options)
             elif isinstance(item, VariableAssignment):
-                options[item.variable.name] = item.value
+                if item.pre_eval:
+                    pre_options = options.copy()
+                    pre_options["pre_eval"] = True
+                    options[item.variable.name] = Sequence(
+                        values=list(_resolve_item(item.value, pre_options))
+                    )
+                else:
+                    options[item.variable.name] = item.value
             elif isinstance(item, Variable):
                 if options[item.name]:
-                    variable = options[item.name]
+                    variable = deepcopy(options[item.name])
                     yield from _resolve_item(variable, options)
             elif isinstance(item, Range):
                 yield from item.evaluate(options)
@@ -367,6 +381,8 @@ class Sequence(Meta):
                 if isinstance(item, Pitch):
                     item.update_options(options)
                     item.update_note()
+                    if options.get("pre_eval",False):
+                        item.duration = options["duration"]
                 if isinstance(item, Rest):
                     item.update_options(options)
                 elif isinstance(item, (RandomPitch, RandomInteger)):
@@ -413,7 +429,10 @@ class Sequence(Meta):
                     options[current.key] = current.value
             return options
 
-        def _create_pitch(current: Item, options: dict) -> dict:
+        def _create_pitch_without_note(current: Item, options: dict) -> Pitch:
+            return Pitch(pitch_class=current.get_value(options))
+
+        def _create_pitch(current: Item, options: dict) -> Pitch:
             """Create pitch based on values and options"""
 
             if "modifier" in options:
@@ -772,7 +791,7 @@ class ListOperation(Sequence):
                         flattened_list.append(filter_operation(item))
                 elif isinstance(item, Cyclic):
                     value = item.get_value()
-                    if isinstance(value,Sequence):
+                    if isinstance(value, Sequence):
                         flattened_list.extend(filter_operation(value))
                     elif isinstance(value, (Event, RandomInteger, Integer)):
                         flattened_list.append(value)
@@ -788,9 +807,9 @@ class ListOperation(Sequence):
 
         operators = self.values[1::2]  # Fetch every second operator element
         values = self.values[::2]  # Fetch every second list element
-        values = filter_operation(values)  # Filter out 
-        if len(values)==1:
-            return values[0] # If right hand doesnt contain anything sensible
+        values = filter_operation(values)  # Filter out
+        if len(values) == 1:
+            return values[0]  # If right hand doesnt contain anything sensible
         left = values[0]  # Start results with the first array
 
         for i, operand in enumerate(operators):

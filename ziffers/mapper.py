@@ -262,8 +262,12 @@ class ZiffersTransformer(Transformer):
 
     def assignment(self, items):
         var = items[0]
-        content = items[1]
-        return VariableAssignment(variable=var, value=content, text=var.text+"="+content.text)
+        op = items[1]
+        content = items[2]
+        return VariableAssignment(variable=var, value=content, text=var.text+"="+content.text, pre_eval=True if op == "=" else False)
+
+    def ass_op(self,items):
+        return items[0].value
 
     def variable(self, items):
         return Variable(name=items[0].value, text=items[0].value)
