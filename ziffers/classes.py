@@ -658,14 +658,17 @@ class RepeatedListSequence(Sequence):
 class Subdivision(Sequence):
     """Class for subdivisions"""
 
+    full_duration: float = field(default=None, init=False)
+
     def evaluate_values(self, options):
         """Evaluate values and store to evaluated_values"""
+        self.full_duration = options["duration"]
         self.evaluated_values = list(self.evaluate_tree(options))
 
     def evaluate_durations(self, duration=None):
         """Calculate new durations by dividing with the number of items in the sequence"""
         if duration is None:
-            duration = self.evaluated_values[0].duration
+            duration = self.full_duration
         new_d = duration / len(self.evaluated_values)
         for item in self.evaluated_values:
             if isinstance(item, Subdivision):
