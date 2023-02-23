@@ -270,6 +270,16 @@ class Function(Event):
 
     run: str = field(default=None)
 
+@dataclass(kw_only=True)
+class VariableAssignment(Item):
+    """Class for defining variables"""
+    variable: str
+    value: Item
+
+@dataclass(kw_only=True)
+class Variable(Item):
+    """Class for using variables"""
+    name: str
 
 @dataclass(kw_only=True)
 class Sequence(Meta):
@@ -334,6 +344,12 @@ class Sequence(Meta):
                     yield item
                 else:
                     yield from item.evaluate_tree(options)
+            elif isinstance(item, VariableAssignment):
+                options[item.variable.name] = item.value
+            elif isinstance(item, Variable):
+                if options[item.name]:
+                    variable = options[item.name]
+                    yield from _resolve_item(variable, options)
             elif isinstance(item, Range):
                 yield from item.evaluate(options)
             elif isinstance(item, Cyclic):

@@ -28,6 +28,8 @@ from .classes import (
     Integer,
     Euclid,
     RepeatedSequence,
+    VariableAssignment,
+    Variable
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS, OPERATORS
@@ -254,6 +256,17 @@ class ZiffersTransformer(Transformer):
         """Return partial eval item"""
         val = token[0].value
         return Atom(value=val, text=val)
+
+
+    # Variable assignment
+
+    def assignment(self, items):
+        var = items[0]
+        content = items[1]
+        return VariableAssignment(variable=var, value=content, text=var.text+"="+content.text)
+
+    def variable(self, items):
+        return Variable(name=items[0].value, text=items[0].value)
 
     # List rules
 
