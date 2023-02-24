@@ -1,6 +1,6 @@
     // Root for the rules    
     ?root: sequence -> start
-    sequence: (pitch_class | assignment | variable | rest | dur_change | oct_mod | oct_change | WS | chord | named_roman | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
+    sequence: (pitch_class | repeat_item | assignment | variable | rest | dur_change | oct_mod | oct_change | WS | chord | named_roman | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
     
     // Pitch classes
     pitch_class: prefix* pitch
@@ -42,6 +42,7 @@
 
     // Repeats
     repeat: "[:" sequence ":" [number] "]"
+    repeat_item: (pitch_class | list | random_integer) ":" number
 
     // List
     list: prefix* "(" sequence ")"

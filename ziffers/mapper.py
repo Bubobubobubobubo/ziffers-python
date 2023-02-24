@@ -380,3 +380,6 @@ class ZiffersTransformer(Transformer):
             )
         else:
             return RepeatedSequence(values=items[0], repeats=Integer(value=2, text="2"))
+
+    def repeat_item(self, items):
+        return RepeatedListSequence(values=[items[0]],repeats=items[1])
