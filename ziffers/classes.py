@@ -345,6 +345,8 @@ class Sequence(Meta):
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value(options)
+                    while isinstance(repeats, Cyclic):
+                        repeats = item.repeats.get_value(options)
                     if isinstance(repeats, Pitch):
                         repeats = repeats.get_value(options)
                     yield from _generative_repeat(item, repeats, options)

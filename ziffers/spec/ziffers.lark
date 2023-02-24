@@ -42,7 +42,7 @@
 
     // Repeats
     repeat: "[:" sequence ":" [number] "]"
-    repeat_item: (pitch_class | list | random_integer | cycle) ":" number
+    repeat_item: (pitch_class | list | random_integer | cycle | rest | subdivision) ":" number
 
     // List
     list: prefix* "(" sequence ")"
