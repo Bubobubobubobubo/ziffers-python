@@ -345,6 +345,8 @@ class Sequence(Meta):
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value(options)
+                    if isinstance(repeats, Pitch):
+                        repeats = repeats.get_value(options)
                     yield from _generative_repeat(item, repeats, options)
                 elif isinstance(item, Subdivision):
                     item.evaluate_values(options)
@@ -737,7 +739,7 @@ class Cyclic(Item):
             text = text + self.wrap_end
         return text
 
-    def get_value(self):
+    def get_value(self, options=None):
         """Get the value for the current cycle"""
         value = self.values[self.cycle % len(self.values)]
         self.cycle += 1

@@ -382,4 +382,4 @@ class ZiffersTransformer(Transformer):
             return RepeatedSequence(values=items[0], repeats=Integer(value=2, text="2"))
 
     def repeat_item(self, items):
-        return RepeatedListSequence(values=[items[0]],repeats=items[1])
+        return RepeatedListSequence(values=[items[0]],repeats=items[1], wrap_start="", wrap_end=":"+items[1].text)
