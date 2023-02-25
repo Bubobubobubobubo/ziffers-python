@@ -1,5 +1,4 @@
 """ Lark transformer for mapping Lark tokens to Ziffers objects """
-from typing import Optional
 from lark import Transformer
 from .classes import (
     Ziffers,
@@ -29,7 +28,7 @@ from .classes import (
     Euclid,
     RepeatedSequence,
     VariableAssignment,
-    Variable
+    Variable,
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS, OPERATORS
@@ -50,51 +49,82 @@ class ZiffersTransformer(Transformer):
 
     def rest(self, items):
         """Return duration event"""
-        if len(items)>0:
-            chars = items[0]
-            val = DEFAULT_DURS[chars[0]]
-            # TODO: Add support for dots
-            #if len(chars)>1:
-            #    dots = len(chars)-1
-            #    val = val * (2.0 - (1.0 / (2 * dots)))
-            return Rest(text=chars+"r", duration=val)
+        if len(items) > 0:
+            prefixes = sum_dict(items)
+            text_prefix = prefixes.pop("text")
+            prefixes["prefix"] = text_prefix
+            return Rest(text=text_prefix + "r", local_options=prefixes)
         return Rest(text="r")
 
-        return Rest(text=chars+"r", duration=val)
+    def random_integer(self, items) -> RandomInteger:
+        """Parses random integer syntax"""
+        if len(items) > 1:
+            prefixes = sum_dict(items[0:-1])  # If there are prefixes
+            text_prefix = prefixes.pop("text")
+            prefixes["prefix"] = text_prefix
+            val = items[-1][1:-1].split(",")
+            return RandomInteger(
+                min=int(val[0]),
+                max=int(val[1]),
+                text=text_prefix + items[-1],
+                local_options=prefixes,
+            )
+        else:
+            val = items[0][1:-1].split(",")
+            return RandomInteger(min=int(val[0]), max=int(val[1]), text=items[0])
 
-    def rest_duration(self,items):
+    def random_integer_re(self, items):
+        """Return random integer notation from regex"""
         return items[0].value
 
-    def random_integer(self, item) -> RandomInteger:
-        """Parses random integer syntax"""
-        val = item[0][1:-1].split(",")
-        return RandomInteger(min=int(val[0]), max=int(val[1]), text=item[0].value)
-
-    def range(self, item) -> Range:
+    def range(self, items) -> Range:
         """Parses range syntax"""
-        val = item[0].split("..")
-        return Range(start=int(val[0]), end=int(val[1]), text=item[0].value)
+        if len(items) > 1:
+            prefixes = sum_dict(items[0:-1])  # If there are prefixes
+            text_prefix = prefixes.pop("text")
+            prefixes["prefix"] = text_prefix
+            val = items[-1].split("..")
+            return Range(
+                start=int(val[0]),
+                end=int(val[1]),
+                text=text_prefix + items[-1],
+                local_options=prefixes,
+            )
+        # Else
+        val = items[0].split("..")
+        return Range(start=int(val[0]), end=int(val[1]), text=items[0])
+
+    def range_re(self, items):
+        """Return range value from regex"""
+        return items[0].value
 
     def cycle(self, items) -> Cyclic:
         """Parses cycle"""
         values = items[0]
         return Cyclic(values=values)
 
-    def pitch_class(self, item):
+    def pitch_class(self, items):
         """Parses pitch class"""
 
         # If there are prefixes
-        if len(item) > 1:
+        if len(items) > 1:
             # Collect&sum prefixes from any order: _qee^s4 etc.
-            result = sum_dict(item)
-            return Pitch(**result)
+            prefixes = sum_dict(items[0:-1])  # If there are prefixes
+            text_prefix = prefixes.pop("text")
+            prefixes["prefix"] = text_prefix
+            p = Pitch(
+                pitch_class=items[-1]["pitch_class"],
+                text=text_prefix + items[-1]["text"],
+                local_options=prefixes,
+            )
+            return p
 
-        val = item[0]
+        val = items[0]
         return Pitch(**val)
 
     def pitch(self, items):
         """Return pitch class info"""
-        text_value = items[0].value.replace("T","10").replace("E","11")
+        text_value = items[0].value.replace("T", "10").replace("E", "11")
         return {"pitch_class": int(text_value), "text": items[0].value}
 
     def prefix(self, items):
@@ -104,7 +134,10 @@ class ZiffersTransformer(Transformer):
     def oct_change(self, items):
         """Parses octave change"""
         octave = items[0]
-        return [OctaveChange(value=octave["octave"], text=octave["text"]), items[1]]
+        return [
+            OctaveChange(value=octave["octave_change"], text=octave["text"]),
+            items[1],
+        ]
 
     def oct_mod(self, items):
         """Parses octave modification"""
@@ -114,7 +147,7 @@ class ZiffersTransformer(Transformer):
     def escaped_octave(self, items):
         """Return octave info"""
         value = items[0][1:-1]
-        return {"octave": int(value), "text": items[0].value}
+        return {"octave_change": int(value), "text": items[0].value}
 
     def octave(self, items):
         """Return octaves ^ and _"""
@@ -124,7 +157,7 @@ class ZiffersTransformer(Transformer):
     def modifier(self, items):
         """Return modifiers # and b"""
         value = 1 if items[0].value == "#" else -1
-        return {"modifier": value}
+        return {"modifier": value, "text": items[0].value}
 
     def chord(self, items):
         """Parses chord"""
@@ -229,9 +262,7 @@ class ZiffersTransformer(Transformer):
     def subdivision(self, items):
         """Parse subdivision"""
         values = flatten(items[0])
-        return Subdivision(
-            values=values, wrap_start="[", wrap_end="]"
-        )
+        return Subdivision(values=values, wrap_start="[", wrap_end="]")
 
     def subitems(self, items):
         """Return subdivision items"""
@@ -257,19 +288,26 @@ class ZiffersTransformer(Transformer):
         val = token[0].value
         return Atom(value=val, text=val)
 
-
     # Variable assignment
 
     def assignment(self, items):
+        """Creates variable assignment"""
         var = items[0]
         op = items[1]
         content = items[2]
-        return VariableAssignment(variable=var, value=content, text=var.text+"="+content.text, pre_eval=True if op == "=" else False)
+        return VariableAssignment(
+            variable=var,
+            value=content,
+            text=var.text + "=" + content.text,
+            pre_eval=True if op == "=" else False,
+        )
 
-    def ass_op(self,items):
+    def ass_op(self, items):
+        """Return parsed type for assignment: = or ~"""
         return items[0].value
 
     def variable(self, items):
+        """Return parsed variable name"""
         return Variable(name=items[0].value, text=items[0].value)
 
     # List rules
@@ -278,9 +316,14 @@ class ZiffersTransformer(Transformer):
         """Parse list sequence notation, ex: (1 2 3)"""
         if len(items) > 1:
             prefixes = sum_dict(items[0:-1])
+            text_prefix = prefixes.pop("text")
+            prefixes["prefix"] = text_prefix
             values = items[-1]
-            seq = ListSequence(values=values, wrap_start=prefixes["text"] + "(")
-            seq.update_values(prefixes)
+            seq = ListSequence(
+                values=values,
+                wrap_start=prefixes["prefix"] + "(",
+                local_options=prefixes,
+            )
             return seq
         else:
             seq = ListSequence(values=items[0])
@@ -295,12 +338,13 @@ class ZiffersTransformer(Transformer):
                     values=items[-2],
                     repeats=items[-1],
                     wrap_end=":" + items[-1].text + ")",
+                    local_options=prefixes,
                 )
             else:
                 seq = RepeatedListSequence(
-                    values=items[-2], repeats=Integer(text="2", value=2)
+                    values=items[-2],
+                    repeats=Integer(text="2", value=2, local_options=prefixes),
                 )
-            seq.update_values(prefixes)
             return seq
         else:
             if items[-1] is not None:
@@ -351,7 +395,7 @@ class ZiffersTransformer(Transformer):
         """Parse list operation"""
         return ListOperation(values=items)
 
-    def right_op(self,items):
+    def right_op(self, items):
         """Get right value for the operation"""
         return items[0]
 
@@ -382,4 +426,10 @@ class ZiffersTransformer(Transformer):
             return RepeatedSequence(values=items[0], repeats=Integer(value=2, text="2"))
 
     def repeat_item(self, items):
-        return RepeatedListSequence(values=[items[0]],repeats=items[1], wrap_start="", wrap_end=":"+items[1].text)
+        """Parse repeat item syntax to sequence, ex: 1:4 (1 2 3):5"""
+        return RepeatedListSequence(
+            values=[items[0]],
+            repeats=items[1],
+            wrap_start="",
+            wrap_end=":" + items[1].text,
+        )

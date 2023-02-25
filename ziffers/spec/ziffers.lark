@@ -17,16 +17,13 @@
     variable: /[A-Z]/
 
     // Durations
-    // TODO: Refactor dchar as: /([mklpdcwyhnqaefsxtgujzo](\.)*)(?=\d)/
     duration_chars: dotted_dur+
     dotted_dur: dchar dot*
     decimal: /-?[0-9]+\.[0-9]+/
     dchar: /[mklpdcwyhnqaefsxtgujzo]/
     dot: "."
    
-    rest: rest_duration? "r"
-    // TODO: Refactor (\.)* when other durchars uses lookaheads
-    rest_duration: /([mklpdcwyhnqaefsxtgujzo])(?=r)/
+    rest: prefix* "r"
 
     // Chords
     chord: pitch_class pitch_class+
@@ -42,7 +39,7 @@
 
     // Repeats
     repeat: "[:" sequence ":" [number] "]"
-    repeat_item: (pitch_class | list | random_integer | cycle | rest | subdivision) ":" number
+    repeat_item: (pitch_class | list | list_op | random_integer | cycle | rest | subdivision | chord | named_roman | variable | range) ":" number
 
     // List
     list: prefix* "(" sequence ")"
@@ -71,11 +68,13 @@
     oct_change: escaped_octave WS
     dur_change: (decimal | char_change)
     char_change: dchar_not_prefix+
-    dchar_not_prefix: /([mklpdcwyhnqaefsxtgujzo](\.)*)(?![\dr])/
+    dchar_not_prefix: /([mklpdcwyhnqaefsxtgujzo](\.)*)(?=[ >])/
 
     // Generative rules
-    random_integer: /\(-?[0-9]+,-?[0-9]+\)/
-    range: /-?[0-9]+\.\.-?[0-9]+/
+    random_integer: prefix* random_integer_re
+    random_integer_re: /\(-?[0-9]+,-?[0-9]+\)/
+    range: prefix* range_re
+    range_re: /-?[0-9]+\.\.-?[0-9]+/
     cycle: "<" sequence ">"
     random_pitch: /(\?)(?!\d)/
     random_percent: /(%)(?!\d)/

@@ -15,6 +15,7 @@ class Meta:
     """Abstract class for all Ziffers items"""
 
     kwargs: dict = field(default=None, repr=False)
+    local_options: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.kwargs:
@@ -26,12 +27,26 @@ class Meta:
             if hasattr(self, key):
                 setattr(self, key, value)
 
-    def update_options(self, new_values):
+    def update_options(self, options):
         """Updates attribute values only if value is None"""
-        for key, value in new_values.items():
+        merged_options = self.local_options | options
+        for key, value in merged_options.items():
             if hasattr(self, key):
-                if getattr(self, key) is None:
-                    setattr(self, key, value)
+                if key == "octave":
+                    local_value = self.local_options.get("octave", False)
+                    oct_change = self.local_options.get("octave_change", False)
+                    if oct_change:
+                        setattr(self, key, oct_change)
+                    elif local_value:
+                        setattr(self, key, value + local_value)
+                    else:
+                        setattr(self, key, value)
+                elif getattr(self, key) is None:
+                    local_value = self.local_options.get(key, False)
+                    if local_value:
+                        setattr(self, key, local_value)
+                    else:
+                        setattr(self, key, value)
 
     def dict(self):
         """Returns safe dict from the dataclass"""
@@ -56,6 +71,14 @@ class Item(Meta):
         self.replace_options(options)
         return self
 
+    def get_options(self) -> dict:
+        """Return local options from item
+
+        Returns:
+            dict: Options as a dict
+        """
+        keys = ["octave","modifier","key","scale","duration"]
+        return {key: getattr(self, key) for key in keys if hasattr(self, key)}
 
 @dataclass(kw_only=True)
 class Whitespace:
@@ -118,17 +141,17 @@ class Pitch(Event):
 
     pitch_class: int
     octave: int = field(default=None)
-    modifier: int = field(default=0)
+    modifier: int = field(default=None)
     note: int = field(default=None)
     key: str = field(default=None)
     scale: str | list = field(default=None)
     freq: float = field(default=None)
-
+    beat: float = field(default=None)
     def __post_init__(self):
         super().__post_init__()
         if self.text is None:
             self.text = str(self.pitch_class)
-        self.update_note()
+            self.update_note()
 
     def update_note(self, force: bool = False):
         """Update note if Key, Scale and Pitch-class are present"""
@@ -147,6 +170,8 @@ class Pitch(Event):
             )
             self.freq = midi_to_freq(note)
             self.note = note
+        if self.duration is not None:
+            self.beat = self.duration*4
 
     def check_note(self, options: dict):
         """Check for note modification"""
@@ -302,16 +327,20 @@ class Sequence(Meta):
     def __post_init__(self):
         super().__post_init__()
         self.text = self.__collect_text()
+        self.update_local_options()
 
     def __getitem__(self, index):
         return self.values[index]
 
-    def update_values(self, new_values):
+    def update_local_options(self):
         """Update value attributes from dict"""
-        for key, value in new_values.items():
+        if self.local_options:
             for obj in self.values:
-                if key != "text" and hasattr(obj, key):
-                    setattr(obj, key, value)
+                if isinstance(obj, Event):
+                    if obj.local_options:
+                        obj.local_options = obj.local_options | self.local_options.copy()
+                    else:
+                        obj.local_options = self.local_options.copy()
 
     def __collect_text(self) -> str:
         """Collect text value from values"""
@@ -337,18 +366,12 @@ class Sequence(Meta):
                     yield from item.evaluate(options)
                 elif isinstance(item, RepeatedSequence):
                     item.evaluate_values(options)
-                    # TODO: Refactor this. Parsing and validating cycles for integers only?
-                    if isinstance(item.repeats, Cyclic):
-                        repeats = item.repeats.get_value().get_value(options)
-                    else:
-                        repeats = item.repeats.get_value(options)
+                    repeats = item.repeats.get_value(options)
+                    repeats = _resolve_repeat_value(repeats)
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value(options)
-                    while isinstance(repeats, Cyclic):
-                        repeats = item.repeats.get_value(options)
-                    if isinstance(repeats, Pitch):
-                        repeats = repeats.get_value(options)
+                    repeats = _resolve_repeat_value(repeats)
                     yield from _generative_repeat(item, repeats, options)
                 elif isinstance(item, Subdivision):
                     item.evaluate_values(options)
@@ -375,9 +398,18 @@ class Sequence(Meta):
             elif isinstance(item, Euclid):
                 yield from _euclidean_items(item, options)
             elif isinstance(item, Modification):
-                options = _update_options(item, options)
+                options = _parse_options(item, options)
             elif isinstance(item, Meta):  # Filters whitespace
                 yield _update_item(item, options)
+
+        def _resolve_repeat_value(item):
+            while isinstance(item, Cyclic):
+                item = item.get_value(options)
+            if isinstance(item, Pitch):
+                return item.get_value(options)
+            if not isinstance(item, Integer):
+                return 2
+            return item
 
         def _update_item(item, options):
             """Update or create new pitch"""
@@ -385,7 +417,7 @@ class Sequence(Meta):
                 if isinstance(item, Pitch):
                     item.update_options(options)
                     item.update_note()
-                    if options.get("pre_eval",False):
+                    if options.get("pre_eval", False):
                         item.duration = options["duration"]
                 if isinstance(item, Rest):
                     item.update_options(options)
@@ -422,7 +454,7 @@ class Sequence(Meta):
             for item in items:
                 yield from _resolve_item(item, options)
 
-        def _update_options(current: Item, options: dict) -> dict:
+        def _parse_options(current: Item, options: dict) -> dict:
             """Update options based on current item"""
             if isinstance(current, (OctaveChange, DurationChange)):
                 options[current.key] = current.value
@@ -439,26 +471,32 @@ class Sequence(Meta):
         def _create_pitch(current: Item, options: dict) -> Pitch:
             """Create pitch based on values and options"""
 
-            if "modifier" in options:
-                c_modifier = options["modifier"]
+            merged_options = options | self.local_options
+
+            if "modifier" in merged_options:
+                c_modifier = merged_options["modifier"]
             else:
                 c_modifier = 0
 
             if hasattr(current, "modifier") and current.modifier is not None:
                 c_modifier += current.modifier
 
-            if "octave" in options:
-                c_octave = options["octave"]
+            if "octave" in merged_options:
+                c_octave = merged_options["octave"]
+                if "octave" in options:
+                    c_octave = options["octave"] + c_octave
             else:
                 c_octave = 0
 
             if hasattr(current, "octave") and current.octave is not None:
                 c_octave += current.octave
-            current_value = current.get_value(options)
+
+            current_value = current.get_value(merged_options)
+
             note = note_from_pc(
-                root=options["key"],
+                root=merged_options["key"],
                 pitch_class=current_value,
-                intervals=options["scale"],
+                intervals=merged_options["scale"],
                 modifier=c_modifier,
                 octave=c_octave,
             )
@@ -469,7 +507,7 @@ class Sequence(Meta):
                 freq=midi_to_freq(note),
                 octave=c_octave,
                 modifier=c_modifier,
-                kwargs=options,
+                kwargs=merged_options,
             )
             return new_pitch
 
@@ -542,7 +580,7 @@ class Ziffers(Sequence):
         self.loop_i = index % self.cycle_length
         new_cycle = floor(index / self.cycle_length)
         if new_cycle > self.cycle_i or new_cycle < self.cycle_i:
-            self.re_eval(self.options)
+            self.re_eval()
             self.cycle_i = new_cycle
             self.cycle_length = len(self.evaluated_values)
             self.loop_i = index % self.cycle_length
@@ -568,11 +606,9 @@ class Ziffers(Sequence):
         self.start_options = self.options.copy()
         self.init_tree(self.options)
 
-    def re_eval(self, options=None):
+    def re_eval(self):
         """Re-evaluate the iterator"""
         self.options = self.start_options.copy()
-        if options:
-            self.options.update(options)
         self.init_tree(self.options)
 
     def init_tree(self, options):
@@ -630,6 +666,10 @@ class Ziffers(Sequence):
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
         return [val.duration for val in self.evaluated_values if isinstance(val, Event)]
+
+    def beats(self) -> list[float]:
+        """Return list of pitch durations as floats"""
+        return [val.beat for val in self.evaluated_values if isinstance(val, Event)]
 
     def pairs(self) -> list[tuple]:
         """Return list of pitches and durations"""
@@ -757,14 +797,17 @@ class Range(Item):
 
     def evaluate(self, options):
         """Evaluates range and generates a generator of Pitches"""
+        merged_options = options | self.local_options
+        if options["octave"]:
+            merged_options["octave"] += options["octave"]
         if self.start < self.end:
             for i in range(self.start, self.end + 1):
-                yield Pitch(pitch_class=i, kwargs=options)
+                yield Pitch(pitch_class=i, local_options=merged_options)
         elif self.start > self.end:
             for i in reversed(range(self.end, self.start + 1)):
-                yield Pitch(pitch_class=i, kwargs=options)
+                yield Pitch(pitch_class=i, local_options=merged_options)
         else:
-            yield Pitch(pitch_class=self.start, kwargs=options)
+            yield Pitch(pitch_class=self.start, local_options=merged_options)
 
 
 @dataclass(kw_only=True)
@@ -783,25 +826,27 @@ class ListOperation(Sequence):
     def evaluate(self, options=DEFAULT_OPTIONS.copy()):
         """Evaluates the operation"""
 
-        def filter_operation(input_list):
+        def filter_operation(input_list, options):
             flattened_list = []
 
-            # TODO: ADD Options here and evaluate events?
             for item in input_list:
                 if isinstance(item, (list, Sequence)):
                     if isinstance(item, ListOperation):
                         flattened_list.extend(item.evaluated_values)
                     else:
-                        flattened_list.append(filter_operation(item))
+                        flattened_list.append(filter_operation(item, options))
                 elif isinstance(item, Cyclic):
                     value = item.get_value()
                     if isinstance(value, Sequence):
-                        flattened_list.extend(filter_operation(value))
+                        flattened_list.extend(filter_operation(value, options))
                     elif isinstance(value, (Event, RandomInteger, Integer)):
                         flattened_list.append(value)
+                elif isinstance(item, Modification):
+                    options = options | item.as_options()
                 elif isinstance(item, Range):
                     flattened_list.extend(list(item.evaluate(options)))
                 elif isinstance(item, (Event, RandomInteger, Integer)):
+                    item.update_options(options)
                     flattened_list.append(item)
 
             if isinstance(input_list, Sequence):
@@ -811,7 +856,7 @@ class ListOperation(Sequence):
 
         operators = self.values[1::2]  # Fetch every second operator element
         values = self.values[::2]  # Fetch every second list element
-        values = filter_operation(values)  # Filter out
+        values = filter_operation(values, options)  # Filter out
         if len(values) == 1:
             return values[0]  # If right hand doesnt contain anything sensible
         left = values[0]  # Start results with the first array
@@ -823,10 +868,9 @@ class ListOperation(Sequence):
                 (right.values if isinstance(right, Sequence) else [right]), left
             )
             left = [
-                # TODO: Get options from x value?
                 Pitch(
                     pitch_class=operation(x.get_value(options), y.get_value(options)),
-                    kwargs=options,
+                    kwargs=y.get_options()
                 )
                 for (x, y) in pairs
             ]
@@ -911,7 +955,6 @@ class RepeatedSequence(Sequence):
     repeats: RandomInteger | Integer = field(default_factory=Integer(value=1, text="1"))
     wrap_start: str = field(default="[:", repr=False)
     wrap_end: str = field(default=":]", repr=False)
-    local_options: dict = field(default_factory=dict, init=False)
 
     evaluated_values: list = None
 

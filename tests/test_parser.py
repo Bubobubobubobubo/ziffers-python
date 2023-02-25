@@ -1,6 +1,6 @@
 """ Test cases for the parser """
 import pytest
-from ziffers import zparse
+from ziffers import zparse, collect
 
 # pylint: disable=missing-function-docstring, line-too-long, invalid-name
 
@@ -52,18 +52,19 @@ def test_parsing_text(pattern: str):
     ],
 )
 def test_pitch_classes(pattern: str, expected: list):
-    assert zparse(pattern).pitch_classes() == expected
+    assert collect(zparse(pattern),len(expected)*2,"pitch_class") == expected*2
 
 
 @pytest.mark.parametrize(
     "pattern,expected",
     [
        ("__6 _0 _1 _2 _3 _4 _5 _6 0 1 2 3 4 5 6 ^0 ^1 ^2 ^3 ^4 ^5 ^6 ^^0", [-2, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2]),
-       ("_ 1 _2 <3>3 ^^4", [-1, -1, 3, 2]), 
+       ("_ 1 _2 <3>3 ^^4", [-1, -2, 3, 1]),
+       ("^ 1 ^1 3 _2 ^^1 _2 <-1> 2 ^4", [1, 2, 1, 0, 3, 0, -1, 0]),
     ]
 )
 def test_pitch_octaves(pattern: str, expected: list):
-    assert zparse(pattern).octaves() == expected
+    assert collect(zparse(pattern),len(expected)*2,"octave") == expected*2
 
 
 @pytest.mark.parametrize(
@@ -71,11 +72,11 @@ def test_pitch_octaves(pattern: str, expected: list):
     [
        ("w [1 [2 3]]", [0.5, 0.25, 0.25]),
        ("1.0 [1 [2 3]] 4 [3 [4 5]]", [0.5, 0.25, 0.25, 1.0, 0.5, 0.25, 0.25]),
-       ("0.5 (0 0.25 3)+1", [0.5, 0.5])
+       ("0.5 (0 0.25 3)+1", [0.5, 0.25])
     ]
 )
 def test_subdivisions(pattern: str, expected: list):
-    assert zparse(pattern).durations() == expected
+    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -85,7 +86,7 @@ def test_subdivisions(pattern: str, expected: list):
     ]
 )
 def test_repeats(pattern: str, expected: list):
-    assert zparse(pattern).notes() == expected
+    assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
 
 
 @pytest.mark.parametrize(
@@ -104,3 +105,4 @@ def test_looping_durations(pattern: str, expected: list):
     for i in range(12):
         durations.append(parsed[i].duration)
     assert durations == expected
+
