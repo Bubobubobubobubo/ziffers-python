@@ -112,12 +112,12 @@ class ZiffersTransformer(Transformer):
             prefixes = sum_dict(items[0:-1])  # If there are prefixes
             text_prefix = prefixes.pop("text")
             prefixes["prefix"] = text_prefix
-            p = Pitch(
+            pitch = Pitch(
                 pitch_class=items[-1]["pitch_class"],
                 text=text_prefix + items[-1]["text"],
                 local_options=prefixes,
             )
-            return p
+            return pitch
 
         val = items[0]
         return Pitch(**val)

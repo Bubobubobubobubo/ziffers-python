@@ -77,8 +77,9 @@ class Item(Meta):
         Returns:
             dict: Options as a dict
         """
-        keys = ["octave","modifier","key","scale","duration"]
+        keys = ["octave", "modifier", "key", "scale", "duration"]
         return {key: getattr(self, key) for key in keys if hasattr(self, key)}
+
 
 @dataclass(kw_only=True)
 class Whitespace:
@@ -147,6 +148,7 @@ class Pitch(Event):
     scale: str | list = field(default=None)
     freq: float = field(default=None)
     beat: float = field(default=None)
+
     def __post_init__(self):
         super().__post_init__()
         if self.text is None:
@@ -171,7 +173,7 @@ class Pitch(Event):
             self.freq = midi_to_freq(note)
             self.note = note
         if self.duration is not None:
-            self.beat = self.duration*4
+            self.beat = self.duration * 4
 
     def check_note(self, options: dict):
         """Check for note modification"""
@@ -209,6 +211,26 @@ class Pitch(Event):
         """
         return self.pitch_class
 
+    def get_notes(self) -> int:
+        """Return notes"""
+        return self.note
+
+    def get_octaves(self) -> int:
+        """Return octave"""
+        return self.octave
+
+    def get_beats(self) -> float:
+        """Return beats"""
+        return self.beat
+
+    def get_durations(self) -> float:
+        """Return duration"""
+        return self.duration
+
+    def get_freqs(self) -> float:
+        """Return frequencies"""
+        return self.freq
+
 
 @dataclass(kw_only=True)
 class RandomPitch(Event):
@@ -241,6 +263,9 @@ class Chord(Event):
     pitch_classes: list[Pitch] = field(default=None)
     notes: list[int] = field(default=None)
     freqs: list[float] = field(default=None, init=False)
+    octaves: list[int] = field(default=None, init=False)
+    durations: list[float] = field(default=None, init=False)
+    beats: list[float] = field(default=None, init=False)
 
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
@@ -250,16 +275,44 @@ class Chord(Event):
         """Update notes"""
         notes = []
         freqs = []
+        octaves = []
+        durations = []
+        beats = []
 
         for pitch in self.pitch_classes:
             pitch.update_options(options)
             pitch.update_note()
             notes.append(pitch.note)
             freqs.append(pitch.freq)
+            octaves.append(pitch.octave)
+            durations.append(pitch.duration)
+            beats.append(pitch.beat)
 
         self.notes = notes
         self.freqs = freqs
+        self.octaves = octaves
+        self.duration = durations
+        self.beats = beats
 
+    def get_notes(self) -> int:
+        """Return notes"""
+        return self.notes
+
+    def get_octaves(self) -> int:
+        """Return octave"""
+        return self.octaves
+
+    def get_beats(self) -> float:
+        """Return beats"""
+        return self.beats
+
+    def get_durations(self) -> float:
+        """Return duration"""
+        return self.durations
+
+    def get_freqs(self) -> float:
+        """Return frequencies"""
+        return self.freqs
 
 @dataclass(kw_only=True)
 class RomanNumeral(Event):
@@ -338,7 +391,9 @@ class Sequence(Meta):
             for obj in self.values:
                 if isinstance(obj, Event):
                     if obj.local_options:
-                        obj.local_options = obj.local_options | self.local_options.copy()
+                        obj.local_options = (
+                            obj.local_options | self.local_options.copy()
+                        )
                     else:
                         obj.local_options = self.local_options.copy()
 
@@ -656,20 +711,32 @@ class Ziffers(Sequence):
     def pitch_classes(self) -> list[int]:
         """Return list of pitch classes as ints"""
         return [
-            val.pitch_class for val in self.evaluated_values if isinstance(val, Pitch)
+            val.get_pitches()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
         ]
 
     def notes(self) -> list[int]:
         """Return list of midi notes"""
-        return [val.note for val in self.evaluated_values if isinstance(val, Pitch)]
+        return [
+            val.get_notes()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
+        ]
 
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
-        return [val.duration for val in self.evaluated_values if isinstance(val, Event)]
+        return [
+            val.get_durations()
+            for val in self.evaluated_values
+            if isinstance(val, Event)
+        ]
 
     def beats(self) -> list[float]:
         """Return list of pitch durations as floats"""
-        return [val.beat for val in self.evaluated_values if isinstance(val, Event)]
+        return [
+            val.get_beats() for val in self.evaluated_values if isinstance(val, Event)
+        ]
 
     def pairs(self) -> list[tuple]:
         """Return list of pitches and durations"""
@@ -681,7 +748,19 @@ class Ziffers(Sequence):
 
     def octaves(self) -> list[int]:
         """Return list of octaves"""
-        return [val.octave for val in self.evaluated_values if isinstance(val, Pitch)]
+        return [
+            val.get_octaves()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
+        ]
+
+    def freqs(self) -> list[int]:
+        """Return list of octaves"""
+        return [
+            val.get_freqs()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
+        ]
 
 
 @dataclass(kw_only=True)
@@ -870,7 +949,7 @@ class ListOperation(Sequence):
             left = [
                 Pitch(
                     pitch_class=operation(x.get_value(options), y.get_value(options)),
-                    kwargs=y.get_options()
+                    kwargs=y.get_options(),
                 )
                 for (x, y) in pairs
             ]
