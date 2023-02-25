@@ -166,6 +166,7 @@ cython_debug/
 .vscode
 
 # Debugging files
+debug/
 debug*.py
 test.py
 

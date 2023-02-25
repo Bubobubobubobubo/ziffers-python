@@ -230,7 +230,7 @@ class ZiffersTransformer(Transformer):
         """Parse subdivision"""
         values = flatten(items[0])
         return Subdivision(
-            values=values, text="[" + "".join([val.text for val in values]) + "]"
+            values=values, wrap_start="[", wrap_end="]"
         )
 
     def subitems(self, items):
