@@ -229,7 +229,7 @@ def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
     pitch_class = note % 12
     octave = midi_to_octave(note) - 5
     if scale.upper() == "CHROMATIC":
-        return (str(pitch_class), pitch_class, octave)
+        return {"text": str(pitch_class), "pitch_class": pitch_class, "octave": octave}
 
     sharps = ["0", "#0", "1", "#1", "2", "3", "#3", "4", "#4", "5", "#5", "6"]
     flats = ["0", "b1", "1", "b2", "2", "3", "b4", "4", "b5", "5", "b6", "6"]
