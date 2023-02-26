@@ -125,3 +125,21 @@ def test_measure_durations(pattern: str, expected: list):
 )
 def test_measure_octaves(pattern: str, expected: list):
     assert collect(zparse(pattern),len(expected)*2,"octave") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("e r qr r q r", [0.125, 0.25, 0.125, 0.25])
+    ]
+)
+def test_rest(pattern: str, expected: list):
+    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("-3..9 1..9", [55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 62, 64, 65, 67, 69, 71, 72, 74, 76])
+    ]
+)
+def test_ranges(pattern: str, expected: list):
+    assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
