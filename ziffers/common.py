@@ -10,6 +10,18 @@ def flatten(arr: list) -> list:
         else [arr]
     )
 
+def rotate(arr, k):
+    """Rotates array"""
+    # Calculate the effective rotation amount (mod the array length)
+    k = k % len(arr)
+    # Rotate the array to the right
+    if k > 0:
+        arr = arr[-k:] + arr[:-k]
+    # Rotate the array to the left
+    elif k < 0:
+        arr = arr[-k:] + arr[:-k]
+    return arr
+
 
 def sum_dict(arr: list[dict]) -> dict:
     """Sums a list of dicts: [{a:3,b:3},{b:1}] -> {a:3,b:4}"""
@@ -73,3 +85,4 @@ def euclidian_rhythm(pulses: int, length: int, rotate: int = 0):
     bool_list = [_starts_descent(res_list, index) for index in range(length)]
 
     return rotation(bool_list, rotate)
+

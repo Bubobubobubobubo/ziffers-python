@@ -1,5 +1,5 @@
 """ Lark transformer for mapping Lark tokens to Ziffers objects """
-from lark import Transformer
+from lark import Transformer, Token
 from .classes import (
     Ziffers,
     Whitespace,
@@ -161,23 +161,52 @@ class ZiffersTransformer(Transformer):
 
     def chord(self, items):
         """Parses chord"""
+        if isinstance(items[-1], Token):
+            return Chord(
+                pitch_classes=items[0:-1],
+                text="".join([val.text for val in items[0:-1]]),
+                inversions=int(items[-1].value[1:]),
+            )
         return Chord(pitch_classes=items, text="".join([val.text for val in items]))
+
+    def invert(self, items):
+        return items[0]
 
     def named_roman(self, items) -> RomanNumeral:
         """Parse chord from roman numeral"""
         numeral = items[0].value
-        if len(items) > 1:
-            name = items[1]
-            chord_notes = chord_from_roman_numeral(numeral, name)
-            parsed_number = parse_roman(numeral)
+        if len(items) == 1:
             return RomanNumeral(
-                text=numeral, value=parsed_number, chord_type=name, notes=chord_notes
+                value=parse_roman(numeral),
+                text=numeral,
+                notes=chord_from_roman_numeral(numeral),
             )
-        return RomanNumeral(
-            value=parse_roman(numeral),
-            text=numeral,
-            notes=chord_from_roman_numeral(numeral),
-        )
+        if len(items) > 2:
+            name = items[1]
+            inversions = int(items[-1].value[1:])
+            return RomanNumeral(
+                text=numeral,
+                value=parse_roman(numeral),
+                chord_type=name,
+                notes=chord_from_roman_numeral(numeral, name),
+                inversions=inversions,
+            )
+        elif len(items) == 2:
+            if isinstance(items[-1], Token):
+                inversions = int(items[-1].value[1:])
+                return RomanNumeral(
+                    value=parse_roman(numeral),
+                    text=numeral,
+                    notes=chord_from_roman_numeral(numeral),
+                    inversions=inversions,
+                )
+            else:
+                return RomanNumeral(
+                    value=parse_roman(numeral),
+                    text=numeral,
+                    chord_type=items[1],
+                    notes=chord_from_roman_numeral(numeral),
+                )
 
     def chord_name(self, item):
         """Return name for chord"""

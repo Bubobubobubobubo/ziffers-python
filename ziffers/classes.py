@@ -262,43 +262,71 @@ class Chord(Event):
 
     pitch_classes: list[Pitch] = field(default=None)
     notes: list[int] = field(default=None)
+    inversions: int = field(default=None)
+    pitches: list[int] = field(default=None, init=False)
     freqs: list[float] = field(default=None, init=False)
     octaves: list[int] = field(default=None, init=False)
     durations: list[float] = field(default=None, init=False)
     beats: list[float] = field(default=None, init=False)
 
+    def __post_init__(self):
+        if self.inversions is not None:
+            self.invert(self.inversions)
+
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
         self.notes = notes
 
+    def invert(self, value: int):
+        """Chord inversion"""
+        new_pitches = (
+            list(reversed(self.pitch_classes)) if value < 0 else self.pitch_classes
+        )
+        for _ in range(abs(value)):
+            new_pitch = new_pitches[_ % len(new_pitches)]
+            if not new_pitch.local_options.get("octave"):
+                new_pitch.local_options["octave"] = 0
+            new_pitch.local_options["octave"] += -1 if value <= 0 else 1
+
+        self.pitch_classes = new_pitches
+
     def update_notes(self, options):
         """Update notes"""
-        notes = []
-        freqs = []
-        octaves = []
-        durations = []
-        beats = []
+        pitches, notes, freqs, octaves, durations, beats = ([] for _ in range(6))
 
+        # Update notes
         for pitch in self.pitch_classes:
             pitch.update_options(options)
             pitch.update_note()
+
+        # Sort by generated notes
+        self.pitch_classes = sorted(self.pitch_classes, key=lambda x: x.note)
+
+        # Create helper lists
+        for pitch in self.pitch_classes:
+            pitches.append(pitch.pitch_class)
             notes.append(pitch.note)
             freqs.append(pitch.freq)
             octaves.append(pitch.octave)
             durations.append(pitch.duration)
             beats.append(pitch.beat)
 
+        self.pitches = pitches
         self.notes = notes
         self.freqs = freqs
         self.octaves = octaves
         self.duration = durations
         self.beats = beats
 
-    def get_notes(self) -> int:
+    def get_pitches(self) -> list:
+        """Return pitch classes"""
+        return self.pitches
+
+    def get_notes(self) -> list:
         """Return notes"""
         return self.notes
 
-    def get_octaves(self) -> int:
+    def get_octaves(self) -> list:
         """Return octave"""
         return self.octaves
 
@@ -314,6 +342,7 @@ class Chord(Event):
         """Return frequencies"""
         return self.freqs
 
+
 @dataclass(kw_only=True)
 class RomanNumeral(Event):
     """Class for roman numbers"""
@@ -322,6 +351,7 @@ class RomanNumeral(Event):
     chord_type: str = field(default=None)
     notes: list[int] = field(default_factory=[])
     pitch_classes: list = None
+    inversions: int = None
 
     def set_notes(self, chord_notes: list[int]):
         """Set notes to roman numeral
@@ -485,17 +515,15 @@ class Sequence(Meta):
                     item = _create_chord_from_roman(item, options)
             return item
 
-        # pylint: disable=locally-disabled, unused-variable
         def _generative_repeat(tree: list, times: int, options: dict):
             """Repeats items and generates new random values"""
-            for i in range(times):
+            for _ in range(times):
                 for item in tree.evaluate_tree(options):
                     yield from _resolve_item(item, options)
 
-        # pylint: disable=locally-disabled, unused-variable
         def _normal_repeat(tree: list, times: int, options: dict):
             """Repeats items with the same random values"""
-            for i in range(times):
+            for _ in range(times):
                 for item in tree:
                     yield from _resolve_item(item, options)
 
@@ -597,7 +625,11 @@ class Sequence(Meta):
                 pitch_classes=pitch_classes,
                 notes=chord_notes,
                 kwargs=options,
+                inversions=current.inversions,
             )
+
+            chord.update_notes(options)
+
             return chord
 
         # Start of the main function: Evaluate and flatten the Ziffers object tree

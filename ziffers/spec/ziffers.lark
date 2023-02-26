@@ -26,10 +26,12 @@
     rest: prefix* "r"
 
     // Chords
-    chord: pitch_class pitch_class+
-    named_roman: roman_number (("^" chord_name))? // TODO: Add | ("+" number)
+    chord: pitch_class pitch_class+ invert?
+    named_roman: roman_number (("^" chord_name))? invert? // TODO: Add | ("+" number)
     chord_name: /[a-zA-Z0-9]+/
     ?roman_number: /iv|v|v?i{1,3}/
+
+    invert: /%-?[0-9][0-9]*/
   
     // Valid as integer
     number: NUMBER | random_integer | cycle
