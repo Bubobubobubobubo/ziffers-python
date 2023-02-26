@@ -1097,6 +1097,9 @@ class RepeatedSequence(Sequence):
                     yield from item.evaluate_tree(self.local_options, True)
                 elif isinstance(item, RepeatedSequence):
                     yield item
+                elif isinstance(item, Subdivision):
+                    item.evaluate_values(options)
+                    yield item
                 else:
                     yield from item
             elif isinstance(item, Cyclic):
