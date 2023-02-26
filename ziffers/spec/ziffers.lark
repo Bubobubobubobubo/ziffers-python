@@ -1,6 +1,6 @@
     // Root for the rules    
     ?root: sequence -> start
-    sequence: (pitch_class | repeat_item | assignment | variable | rest | dur_change | oct_mod | oct_change | WS | chord | named_roman | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
+    sequence: (pitch_class | repeat_item | assignment | variable | rest | dur_change | oct_mod | oct_change | WS | measure | chord | named_roman | cycle | random_integer | random_pitch | random_percent | range | list | repeated_list | lisp_operation | list_op | subdivision | eval | euclid | repeat)*
     
     // Pitch classes
     pitch_class: prefix* pitch
@@ -10,6 +10,8 @@
     escaped_octave: /<-?[0-9]>/
     octave: /[_^]+/
     modifier: /[#b]/
+
+    measure: "|"
 
     // Variable assignment
     assignment: variable ass_op (list | pitch_class | random_integer | random_pitch | cycle | list_op | repeat_item)

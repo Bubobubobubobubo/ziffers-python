@@ -72,7 +72,8 @@ def test_pitch_octaves(pattern: str, expected: list):
     [
        ("w [1 [2 3]]", [0.5, 0.25, 0.25]),
        ("1.0 [1 [2 3]] 4 [3 [4 5]]", [0.5, 0.25, 0.25, 1.0, 0.5, 0.25, 0.25]),
-       ("0.5 (0 0.25 3)+1", [0.5, 0.25])
+       ("0.5 (0 0.25 3)+1", [0.5, 0.25]),
+       ("[0 2 <2 8>:2 4] 0", [0.05, 0.05, 0.05, 0.05, 0.05, 0.25])
     ]
 )
 def test_subdivisions(pattern: str, expected: list):
@@ -82,12 +83,13 @@ def test_subdivisions(pattern: str, expected: list):
     "pattern,expected",
     [
        ("[: 1 [: 2 :] 3 :]", [62, 64, 64, 65, 62, 64, 64, 65]),
-       ("(: 1 (: 2 :) 3 :)", [62, 64, 64, 65, 62, 64, 64, 65])
+       ("(: 1 (: 2 :) 3 :)", [62, 64, 64, 65, 62, 64, 64, 65]),
+       ("(1 2:2 3):2", [62, 64, 64, 65, 62, 64, 64, 65]),
+       ("1:4",[62,62,62,62])
     ]
 )
 def test_repeats(pattern: str, expected: list):
     assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
-
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -106,3 +108,20 @@ def test_looping_durations(pattern: str, expected: list):
         durations.append(parsed[i].duration)
     assert durations == expected
 
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("e 1 | 3 | h 3 | e3 | 4", [0.125,0.25,0.5,0.125,0.25])
+    ]
+)
+def test_measure_durations(pattern: str, expected: list):
+    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("^ 1 | _ 3 | ^3 | 3 | _4", [1,-1,1,0,-1])
+    ]
+)
+def test_measure_octaves(pattern: str, expected: list):
+    assert collect(zparse(pattern),len(expected)*2,"octave") == expected*2

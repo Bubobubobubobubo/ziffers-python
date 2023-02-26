@@ -58,6 +58,7 @@ class Item(Meta):
     """Class for all Ziffers text based items"""
 
     text: str = field(default=None)
+    measure: int = field(default=0, init=False)
 
     def get_updated_item(self, options: dict):
         """Get updated item with replaced options
@@ -135,6 +136,20 @@ class Event(Item):
 class Rest(Event):
     """Class for rests"""
 
+@dataclass 
+class Measure(Item):
+    """ Class for measures/bars. Used to reset default options. """
+    text: str = field(default="|", init=False)
+
+    def reset_options(self, options: dict):
+        """Reset options when measure changes"""
+        next_measure = options.get("measure", 0)+1
+        start_options = options["start_options"].copy()
+        options.clear()
+        options.update(start_options)
+        options["measure"] = next_measure
+        options["start_options"] = start_options.copy()
+        self.measure = next_measure
 
 @dataclass(kw_only=True)
 class Pitch(Event):
@@ -211,25 +226,6 @@ class Pitch(Event):
         """
         return self.pitch_class
 
-    def get_notes(self) -> int:
-        """Return notes"""
-        return self.note
-
-    def get_octaves(self) -> int:
-        """Return octave"""
-        return self.octave
-
-    def get_beats(self) -> float:
-        """Return beats"""
-        return self.beat
-
-    def get_durations(self) -> float:
-        """Return duration"""
-        return self.duration
-
-    def get_freqs(self) -> float:
-        """Return frequencies"""
-        return self.freq
 
 
 @dataclass(kw_only=True)
@@ -261,13 +257,13 @@ class Chord(Event):
     """Class for chords"""
 
     pitch_classes: list[Pitch] = field(default=None)
-    notes: list[int] = field(default=None)
+    note: list[int] = field(default=None)
     inversions: int = field(default=None)
-    pitches: list[int] = field(default=None, init=False)
-    freqs: list[float] = field(default=None, init=False)
-    octaves: list[int] = field(default=None, init=False)
-    durations: list[float] = field(default=None, init=False)
-    beats: list[float] = field(default=None, init=False)
+    pitch_class: list[int] = field(default=None, init=False)
+    freq: list[float] = field(default=None, init=False)
+    octave: list[int] = field(default=None, init=False)
+    duration: list[float] = field(default=None, init=False)
+    beat: list[float] = field(default=None, init=False)
 
     def __post_init__(self):
         if self.inversions is not None:
@@ -275,7 +271,7 @@ class Chord(Event):
 
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
-        self.notes = notes
+        self.note = notes
 
     def invert(self, value: int):
         """Chord inversion"""
@@ -311,36 +307,12 @@ class Chord(Event):
             durations.append(pitch.duration)
             beats.append(pitch.beat)
 
-        self.pitches = pitches
-        self.notes = notes
-        self.freqs = freqs
-        self.octaves = octaves
+        self.pitch = pitches
+        self.note = notes
+        self.freq = freqs
+        self.octave = octaves
         self.duration = durations
-        self.beats = beats
-
-    def get_pitches(self) -> list:
-        """Return pitch classes"""
-        return self.pitches
-
-    def get_notes(self) -> list:
-        """Return notes"""
-        return self.notes
-
-    def get_octaves(self) -> list:
-        """Return octave"""
-        return self.octaves
-
-    def get_beats(self) -> float:
-        """Return beats"""
-        return self.beats
-
-    def get_durations(self) -> float:
-        """Return duration"""
-        return self.durations
-
-    def get_freqs(self) -> float:
-        """Return frequencies"""
-        return self.freqs
+        self.beat = beats
 
 
 @dataclass(kw_only=True)
@@ -452,11 +424,13 @@ class Sequence(Meta):
                 elif isinstance(item, RepeatedSequence):
                     item.evaluate_values(options)
                     repeats = item.repeats.get_value(options)
-                    repeats = _resolve_repeat_value(repeats)
+                    if not isinstance(repeats, int):
+                        repeats = _resolve_repeat_value(repeats)
                     yield from _normal_repeat(item.evaluated_values, repeats, options)
                 elif isinstance(item, RepeatedListSequence):
                     repeats = item.repeats.get_value(options)
-                    repeats = _resolve_repeat_value(repeats)
+                    if not isinstance(repeats, int):
+                        repeats = _resolve_repeat_value(repeats)
                     yield from _generative_repeat(item, repeats, options)
                 elif isinstance(item, Subdivision):
                     item.evaluate_values(options)
@@ -484,6 +458,8 @@ class Sequence(Meta):
                 yield from _euclidean_items(item, options)
             elif isinstance(item, Modification):
                 options = _parse_options(item, options)
+            elif isinstance(item, Measure):
+                item.reset_options(options)
             elif isinstance(item, Meta):  # Filters whitespace
                 yield _update_item(item, options)
 
@@ -492,8 +468,8 @@ class Sequence(Meta):
                 item = item.get_value(options)
             if isinstance(item, Pitch):
                 return item.get_value(options)
-            if not isinstance(item, Integer):
-                return 2
+            if isinstance(item, Integer):
+                return item.get_value(options)
             return item
 
         def _update_item(item, options):
@@ -547,9 +523,6 @@ class Sequence(Meta):
                 else:  # Create value if not existing
                     options[current.key] = current.value
             return options
-
-        def _create_pitch_without_note(current: Item, options: dict) -> Pitch:
-            return Pitch(pitch_class=current.get_value(options))
 
         def _create_pitch(current: Item, options: dict) -> Pitch:
             """Create pitch based on values and options"""
@@ -623,7 +596,7 @@ class Sequence(Meta):
             chord = Chord(
                 text=pitch_text,
                 pitch_classes=pitch_classes,
-                notes=chord_notes,
+                note=chord_notes,
                 kwargs=options,
                 inversions=current.inversions,
             )
@@ -691,11 +664,13 @@ class Ziffers(Sequence):
             self.options = DEFAULT_OPTIONS.copy()
 
         self.start_options = self.options.copy()
+        self.options["start_options"] = self.start_options
         self.init_tree(self.options)
 
     def re_eval(self):
         """Re-evaluate the iterator"""
         self.options = self.start_options.copy()
+        self.options["start_options"] = self.start_options
         self.init_tree(self.options)
 
     def init_tree(self, options):
@@ -743,7 +718,7 @@ class Ziffers(Sequence):
     def pitch_classes(self) -> list[int]:
         """Return list of pitch classes as ints"""
         return [
-            val.get_pitches()
+            val.pitch_class
             for val in self.evaluated_values
             if isinstance(val, (Pitch, Chord))
         ]
@@ -751,7 +726,7 @@ class Ziffers(Sequence):
     def notes(self) -> list[int]:
         """Return list of midi notes"""
         return [
-            val.get_notes()
+            val.note
             for val in self.evaluated_values
             if isinstance(val, (Pitch, Chord))
         ]
@@ -759,7 +734,7 @@ class Ziffers(Sequence):
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
         return [
-            val.get_durations()
+            val.duration
             for val in self.evaluated_values
             if isinstance(val, Event)
         ]
@@ -767,7 +742,7 @@ class Ziffers(Sequence):
     def beats(self) -> list[float]:
         """Return list of pitch durations as floats"""
         return [
-            val.get_beats() for val in self.evaluated_values if isinstance(val, Event)
+            val.beat for val in self.evaluated_values if isinstance(val, Event)
         ]
 
     def pairs(self) -> list[tuple]:
@@ -781,7 +756,7 @@ class Ziffers(Sequence):
     def octaves(self) -> list[int]:
         """Return list of octaves"""
         return [
-            val.get_octaves()
+            val.octave
             for val in self.evaluated_values
             if isinstance(val, (Pitch, Chord))
         ]
@@ -789,7 +764,7 @@ class Ziffers(Sequence):
     def freqs(self) -> list[int]:
         """Return list of octaves"""
         return [
-            val.get_freqs()
+            val.freq
             for val in self.evaluated_values
             if isinstance(val, (Pitch, Chord))
         ]

@@ -46,7 +46,8 @@ DEFAULT_OPTIONS = MappingProxyType({
         "octave": 0, 
         "duration": 0.25, 
         "key": "C4", 
-        "scale": "IONIAN"
+        "scale": "IONIAN",
+        "measure": 0
     })
 
 OPERATORS = MappingProxyType({

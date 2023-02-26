@@ -29,6 +29,7 @@ from .classes import (
     RepeatedSequence,
     VariableAssignment,
     Variable,
+    Measure
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS, OPERATORS
@@ -56,6 +57,10 @@ class ZiffersTransformer(Transformer):
             return Rest(text=text_prefix + "r", local_options=prefixes)
         return Rest(text="r")
 
+    def measure(self, items):
+        """Return new measure"""
+        return Measure()
+        
     def random_integer(self, items) -> RandomInteger:
         """Parses random integer syntax"""
         if len(items) > 1:
