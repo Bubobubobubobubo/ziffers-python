@@ -303,6 +303,10 @@ def chord_from_degree(
     degree: int, name: str, scale: str, root: str | int, num_octaves: int = 1
 ):
     root = note_name_to_midi(root) if isinstance(root, str) else root
+
+    if name is None and scale.lower().capitalize() == "Chromatic":
+        name = "major"
+
     if name:
         return named_chord_from_degree(degree, name, root, scale, num_octaves)
     else:
