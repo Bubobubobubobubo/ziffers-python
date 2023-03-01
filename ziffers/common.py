@@ -10,6 +10,7 @@ def flatten(arr: list) -> list:
         else [arr]
     )
 
+
 def rotate(arr, k):
     """Rotates array"""
     # Calculate the effective rotation amount (mod the array length)
@@ -22,6 +23,13 @@ def rotate(arr, k):
         arr = arr[-k:] + arr[:-k]
     return arr
 
+def repeat_text(pos,neg,times):
+    """Helper to repeat text"""
+    if times>0:
+        return pos*times
+    if times<0:
+        return neg*abs(times)
+    return ""
 
 def sum_dict(arr: list[dict]) -> dict:
     """Sums a list of dicts: [{a:3,b:3},{b:1}] -> {a:3,b:4}"""
@@ -67,7 +75,7 @@ def string_rewrite(axiom: str, rules: dict):
     return pattern.sub(lambda m: next(_apply_rules(m)), axiom)
 
 
-def euclidian_rhythm(pulses: int, length: int, rotate: int = 0):
+def euclidian_rhythm(pulses: int, length: int, rot: int = 0):
     """Calculate Euclidean rhythms. Original algorithm by Thomas Morrill."""
 
     def _starts_descent(arr, index):
@@ -84,5 +92,4 @@ def euclidian_rhythm(pulses: int, length: int, rotate: int = 0):
     res_list = [pulses * t % length for t in range(-1, length - 1)]
     bool_list = [_starts_descent(res_list, index) for index in range(length)]
 
-    return rotation(bool_list, rotate)
-
+    return rotation(bool_list, rot)

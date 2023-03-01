@@ -1729,7 +1729,6 @@ def __build_chords():
         "a": aug,
         "aug": aug,
         "diminished": dim,
-        "dim": dim,
         "i": dim,
         "diminished7": dim7,
         "dim7": dim7,

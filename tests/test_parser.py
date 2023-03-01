@@ -158,3 +158,23 @@ def test_rest(pattern: str, expected: list):
 )
 def test_ranges(pattern: str, expected: list):
     assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("i ii iii iv v vi vii", [[60, 64, 67], [62, 65, 69], [64, 67, 71], [65, 69, 72], [67, 71, 74], [69, 72, 76], [71, 74, 77]])
+    ]
+)
+def test_romans(pattern: str, expected: list):
+    assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("[: i vi v :]", [[0, 2, 4], [5, 0, 2], [4, 6, 1], [0, 2, 4], [5, 0, 2], [4, 6, 1]]),
+      ("i ii iii iv v vi vii", [[0, 2, 4], [1, 3, 5], [2, 4, 6], [3, 5, 0], [4, 6, 1], [5, 0, 2], [6, 1, 3]]),
+      ("i^7 i^min iv^6", [[0, 2, 4, 6], [0, 2, 4], [3, 5, 0, 1]])
+    ]
+)
+def test_romans_pcs(pattern: str, expected: list):
+    assert collect(zparse(pattern),len(expected)*2,"pitches") == expected*2

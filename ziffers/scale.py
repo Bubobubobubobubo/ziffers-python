@@ -3,8 +3,8 @@
 # pylint: disable=locally-disabled, no-name-in-module
 import re
 from math import floor
+from .common import repeat_text
 from .defaults import (
-    DEFAULT_OCTAVE,
     SCALES,
     MODIFIERS,
     NOTES_TO_INTERVALS,
@@ -44,10 +44,12 @@ def note_name_to_interval(name: str) -> int:
     interval = NOTES_TO_INTERVALS[values[0].capitalize()]
     return interval + modifier
 
+
 def midi_to_freq(note: int) -> float:
-    """Transform midi to frequency""" 
-    freq = 440 # Frequency of A
+    """Transform midi to frequency"""
+    freq = 440  # Frequency of A
     return (freq / 32) * (2 ** ((note - 9) / 12))
+
 
 def note_name_to_midi(name: str) -> int:
     """Parse note name to midi
@@ -80,6 +82,45 @@ def get_scale(name: str) -> list[int]:
     scale = SCALES.get(name.lower().capitalize(), SCALES["Ionian"])
     return scale
 
+
+def get_scale_notes(name: str, root: int = 60, num_octaves: int = 1) -> list[int]:
+    """Return notes for the scale
+
+    Args:
+        name (str): Name of the scale
+        root (int, optional): Root note. Defaults to 60.
+        num_octaves (int, optional): Number of octaves. Defaults to 1.
+
+    Returns:
+        list[int]: List of notes
+    """
+    scale = get_scale(name)
+    scale_notes = [root]
+    for _ in range(num_octaves):
+        scale_notes = scale_notes + [root := root + semitone for semitone in scale]
+    return scale_notes
+
+
+def get_chord_from_scale(
+    degree: int, root: int = 60, scale: str = "Major", num_notes: int = 3, skip: int = 2
+) -> list[int]:
+    """Generate chord from the scale by skipping notes
+
+    Args:
+        degree (int): Degree of scale to start on
+        root (int, optional): Root for the scale. Defaults to 60.
+        scale (str, optional): Name of the scale. Defaults to "Major".
+        num_notes (int, optional): Number of notes. Defaults to 3.
+        skip (int, optional): Takes every n from the scale. Defaults to 2.
+
+    Returns:
+        list[int]: List of midi notes
+    """
+    num_of_octaves = ((num_notes * skip + degree) // get_scale_length(scale)) + 1
+    scale_notes = get_scale_notes(scale, root, num_of_octaves)
+    return scale_notes[degree - 1 :: skip][:num_notes]
+
+
 def get_scale_length(name: str) -> int:
     """Get length of the scale
 
@@ -91,6 +132,7 @@ def get_scale_length(name: str) -> int:
     """
     scale = SCALES.get(name.lower().capitalize(), SCALES["Ionian"])
     return len(scale)
+
 
 # pylint: disable=locally-disabled, too-many-arguments
 def note_from_pc(
@@ -242,18 +284,33 @@ def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
         npc = sharps[pitch_class]
 
     if len(npc) > 1:
+        modifier = 1 if (npc[0] == "#") else -1
         return {
-            "text": npc,
+            "text": repeat_text("^", "_", octave)+npc,
             "pitch_class": int(npc[1]),
             "octave": octave,
-            "modifier": 1 if (npc[0] == "#") else -1,
+            "modifier": modifier,
         }
 
-    return {"text": npc, "pitch_class": int(npc), "octave": octave}
+    return {
+        "text": repeat_text("^", "_", octave)+npc,
+        "pitch_class": int(npc),
+        "octave": octave,
+    }
 
 
-def chord_from_roman_numeral(
-    roman: str, name: str = "major", num_octaves: int = 1
+def chord_from_degree(
+    degree: int, name: str, scale: str, root: str | int, num_octaves: int = 1
+):
+    root = note_name_to_midi(root) if isinstance(root, str) else root
+    if name:
+        return named_chord_from_degree(degree, name, root, scale, num_octaves)
+    else:
+        return get_chord_from_scale(degree, root, scale)
+
+
+def named_chord_from_degree(
+    degree: int, name: str = "major", root: int = 60, scale: str="Major", num_octaves: int = 1
 ) -> list[int]:
     """Generates chord from given roman numeral and chord name
 
@@ -265,11 +322,10 @@ def chord_from_roman_numeral(
     Returns:
         list[int]: _description_
     """
-    root = parse_roman(roman) - 1
-    tonic = (DEFAULT_OCTAVE * 12) + root + 12
     intervals = CHORDS.get(name, CHORDS["major"])
+    scale_degree = get_scale_notes(scale, root)[degree-1]
     notes = []
     for cur_oct in range(num_octaves):
-        for iterval in intervals:
-            notes.append(tonic + iterval + (cur_oct * 12))
+        for interval in intervals:
+            notes.append(scale_degree + interval + (cur_oct * 12))
     return notes

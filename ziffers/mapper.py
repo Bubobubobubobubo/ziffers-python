@@ -29,11 +29,11 @@ from .classes import (
     RepeatedSequence,
     VariableAssignment,
     Variable,
-    Measure
+    Measure,
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS, OPERATORS
-from .scale import parse_roman, chord_from_roman_numeral
+from .scale import parse_roman
 
 
 # pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
@@ -60,7 +60,7 @@ class ZiffersTransformer(Transformer):
     def measure(self, items):
         """Return new measure"""
         return Measure()
-        
+
     def random_integer(self, items) -> RandomInteger:
         """Parses random integer syntax"""
         if len(items) > 1:
@@ -175,17 +175,15 @@ class ZiffersTransformer(Transformer):
         return Chord(pitch_classes=items, text="".join([val.text for val in items]))
 
     def invert(self, items):
+        """Return chord inversion"""
         return items[0]
 
     def named_roman(self, items) -> RomanNumeral:
         """Parse chord from roman numeral"""
         numeral = items[0].value
+        # TODO: Refactor this and the rule
         if len(items) == 1:
-            return RomanNumeral(
-                value=parse_roman(numeral),
-                text=numeral,
-                notes=chord_from_roman_numeral(numeral),
-            )
+            return RomanNumeral(value=parse_roman(numeral), text=numeral)
         if len(items) > 2:
             name = items[1]
             inversions = int(items[-1].value[1:])
@@ -193,7 +191,6 @@ class ZiffersTransformer(Transformer):
                 text=numeral,
                 value=parse_roman(numeral),
                 chord_type=name,
-                notes=chord_from_roman_numeral(numeral, name),
                 inversions=inversions,
             )
         elif len(items) == 2:
@@ -202,15 +199,11 @@ class ZiffersTransformer(Transformer):
                 return RomanNumeral(
                     value=parse_roman(numeral),
                     text=numeral,
-                    notes=chord_from_roman_numeral(numeral),
                     inversions=inversions,
                 )
             else:
                 return RomanNumeral(
-                    value=parse_roman(numeral),
-                    text=numeral,
-                    chord_type=items[1],
-                    notes=chord_from_roman_numeral(numeral),
+                    value=parse_roman(numeral), text=numeral, chord_type=items[1]
                 )
 
     def chord_name(self, item):
@@ -219,7 +212,7 @@ class ZiffersTransformer(Transformer):
 
     def roman_number(self, item):
         """Return roman numeral"""
-        return item.value
+        return item[0]
 
     def dur_change(self, items):
         """Parses duration change"""

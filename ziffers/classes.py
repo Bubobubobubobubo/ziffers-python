@@ -6,7 +6,14 @@ import operator
 import random
 from copy import deepcopy
 from .defaults import DEFAULT_OPTIONS
-from .scale import note_from_pc, midi_to_pitch_class, midi_to_freq, get_scale_length
+from .common import repeat_text
+from .scale import (
+    note_from_pc,
+    midi_to_pitch_class,
+    midi_to_freq,
+    get_scale_length,
+    chord_from_degree,
+)
 from .common import euclidian_rhythm
 
 
@@ -39,7 +46,7 @@ class Meta:
                         setattr(self, key, oct_change)
                     elif local_value:
                         setattr(self, key, value + local_value)
-                    else:
+                    elif getattr(self, key) is None:
                         setattr(self, key, value)
                 elif getattr(self, key) is None:
                     local_value = self.local_options.get(key, False)
@@ -172,6 +179,13 @@ class Pitch(Event):
         if self.text is None:
             self.text = str(self.pitch_class)
             self.update_note()
+            #self._update_text()
+
+    def _update_text(self):
+        if self.octave is not None:
+            self.text = repeat_text("^","_",self.octave) + self.text
+        if self.modifier is not None:
+            self.text = repeat_text("#","b",self.modifier) + self.text
 
     def get_note(self):
         """Getter for note"""
@@ -295,6 +309,11 @@ class Chord(Event):
         if self.inversions is not None:
             self.invert(self.inversions)
 
+    @property
+    def note(self):
+        """Synonym for notes"""
+        return self.notes
+
     def set_notes(self, notes: list[int]):
         """Set notes to the class"""
         self.notes = notes
@@ -336,7 +355,7 @@ class Chord(Event):
 
         self.pitch_classes = new_pitches
 
-    def update_notes(self, options):
+    def update_notes(self, options, force=False):
         """Update notes"""
         pitches, notes, freqs, octaves, durations, beats = ([] for _ in range(6))
 
@@ -371,9 +390,9 @@ class RomanNumeral(Event):
 
     value: str = field(default=None)
     chord_type: str = field(default=None)
-    notes: list[int] = field(default_factory=[])
-    pitch_classes: list = None
-    inversions: int = None
+    notes: list[int] = field(default=None, init=False)
+    pitch_classes: list = field(default=None, init=False)
+    inversions: int = field(default=None)
 
     def set_notes(self, chord_notes: list[int]):
         """Set notes to roman numeral
@@ -623,30 +642,24 @@ class Sequence(Meta):
             scale = options["scale"]
             pitch_text = ""
             pitch_classes = []
-            chord_notes = []
+            current.notes = chord_from_degree(
+                current.value, current.chord_type, options["scale"], options["key"]
+            )
             for note in current.notes:
                 pitch_dict = midi_to_pitch_class(note, key, scale)
                 pitch_classes.append(
                     Pitch(
                         pitch_class=pitch_dict["pitch_class"],
-                        kwargs=(pitch_dict | options),
+                        note=note,
+                        kwargs=(options | pitch_dict),
                     )
                 )
                 pitch_text += pitch_dict["text"]
-                chord_notes.append(
-                    note_from_pc(
-                        root=key,
-                        pitch_class=pitch_dict["pitch_class"],
-                        intervals=scale,
-                        modifier=pitch_dict.get("modifier", 0),
-                        octave=pitch_dict.get("octave", 0),
-                    )
-                )
 
             chord = Chord(
                 text=pitch_text,
                 pitch_classes=pitch_classes,
-                notes=chord_notes,
+                notes=current.notes,
                 kwargs=options,
                 inversions=current.inversions,
             )
@@ -776,16 +789,24 @@ class Ziffers(Sequence):
     def notes(self) -> list[int]:
         """Return list of midi notes"""
         return [
-            val.get_note() for val in self.evaluated_values if isinstance(val, (Pitch, Chord))
+            val.get_note()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
         ]
 
     def durations(self) -> list[float]:
         """Return list of pitch durations as floats"""
-        return [val.get_duration() for val in self.evaluated_values if isinstance(val, Event)]
+        return [
+            val.get_duration()
+            for val in self.evaluated_values
+            if isinstance(val, Event)
+        ]
 
     def beats(self) -> list[float]:
         """Return list of pitch durations as floats"""
-        return [val.get_beat() for val in self.evaluated_values if isinstance(val, Event)]
+        return [
+            val.get_beat() for val in self.evaluated_values if isinstance(val, Event)
+        ]
 
     def pairs(self) -> list[tuple]:
         """Return list of pitches and durations"""
@@ -806,7 +827,9 @@ class Ziffers(Sequence):
     def freqs(self) -> list[int]:
         """Return list of octaves"""
         return [
-            val.get_freq() for val in self.evaluated_values if isinstance(val, (Pitch, Chord))
+            val.get_freq()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
         ]
 
 
@@ -1110,6 +1133,8 @@ class RepeatedSequence(Sequence):
                 yield item.get_updated_item(self.local_options)
             elif isinstance(item, Range):
                 yield from item.evaluate(self.local_options)
+            elif isinstance(item, (Pitch, Chord, RomanNumeral)):
+                yield item
             elif isinstance(item, (Event, RandomInteger)):
                 yield Pitch(
                     pitch_class=item.get_value(self.local_options),
