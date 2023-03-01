@@ -661,6 +661,7 @@ class Sequence(Meta):
             chord = Chord(
                 text=pitch_text,
                 pitch_classes=pitch_classes,
+                duration=options["duration"],
                 notes=current.notes,
                 kwargs=options,
                 inversions=current.inversions,
