@@ -355,14 +355,15 @@ class Chord(Event):
 
         self.pitch_classes = new_pitches
 
-    def update_notes(self, options, force=False):
+    def update_notes(self, options=None):
         """Update notes"""
         pitches, notes, freqs, octaves, durations, beats = ([] for _ in range(6))
 
         # Update notes
         for pitch in self.pitch_classes:
-            pitch.update_options(options)
-            pitch.update_note()
+            if options is not None:
+                pitch.update_options(options)
+            pitch.update_note(True)
 
         # Sort by generated notes
         self.pitch_classes = sorted(self.pitch_classes, key=lambda x: x.note)
@@ -651,6 +652,7 @@ class Sequence(Meta):
                     Pitch(
                         pitch_class=pitch_dict["pitch_class"],
                         note=note,
+                        freq=midi_to_freq(note),
                         kwargs=(options | pitch_dict),
                     )
                 )
