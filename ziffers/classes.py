@@ -1096,8 +1096,10 @@ class ListOperation(Sequence):
             # _python_operation starts. Filter & evaluate items.
 
             left = _filter_operation(left, options)
-            if isinstance(right, (Sequence, Cyclic)):
+            if isinstance(right, Sequence):
                 right = _filter_operation(right, options)
+            elif isinstance(right, Cyclic):
+                right = right.get_value(options)
 
             # Create product of items.
             pairs = product(
