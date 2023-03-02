@@ -301,7 +301,19 @@ def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
 
 def chord_from_degree(
     degree: int, name: str, scale: str, root: str | int, num_octaves: int = 1
-):
+) -> list[int]:
+    """Generate chord from scale
+
+    Args:
+        degree (int): Chord degree
+        name (str): Chord type
+        scale (str): Scale name
+        root (str | int): Root for the chord
+        num_octaves (int, optional): Number of octaves. Defaults to 1.
+
+    Returns:
+        list[int]: Created chord as list of midi notes
+    """
     root = note_name_to_midi(root) if isinstance(root, str) else root
 
     if name is None and scale.lower().capitalize() == "Chromatic":

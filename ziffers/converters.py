@@ -66,6 +66,6 @@ class ZiffersMusic21(converter.subConverters.SubConverter):
                 m_item = note.Rest(item.duration * 4)
             elif isinstance(item, Chord):
                 m_item = chord.Chord(item.notes)
-                m_item.duration.quarterLength = item.durations * 4
+                m_item.duration.quarterLength = item.duration * 4
             note_stream.append(m_item)
         self.stream = note_stream.makeMeasures()

@@ -1,6 +1,6 @@
 """ Common methods used in parsing """
 import re
-
+from copy import deepcopy
 
 def flatten(arr: list) -> list:
     """Flattens array"""
@@ -93,3 +93,20 @@ def euclidian_rhythm(pulses: int, length: int, rot: int = 0):
     bool_list = [_starts_descent(res_list, index) for index in range(length)]
 
     return rotation(bool_list, rot)
+
+
+def cyclic_zip(first: list, second: list) -> list:
+    """Cyclic zip method
+
+    Args:
+        first (list): First list
+        second (list): Second list
+
+    Returns:
+        list: Cyclicly zipped list
+    """
+    max_length = max(len(first), len(second))
+    result = []
+    for i in range(max_length):
+        result.append([first[i % len(first)], second[i % len(second)]])
+    return [deepcopy(item) for sublist in result for item in sublist]

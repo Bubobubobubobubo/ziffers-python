@@ -6,7 +6,7 @@ import operator
 import random
 from copy import deepcopy
 from .defaults import DEFAULT_OPTIONS
-from .common import repeat_text
+from .common import repeat_text, cyclic_zip
 from .scale import (
     note_from_pc,
     midi_to_pitch_class,
@@ -179,13 +179,13 @@ class Pitch(Event):
         if self.text is None:
             self.text = str(self.pitch_class)
             self.update_note()
-            #self._update_text()
+            # self._update_text()
 
     def _update_text(self):
         if self.octave is not None:
-            self.text = repeat_text("^","_",self.octave) + self.text
+            self.text = repeat_text("^", "_", self.octave) + self.text
         if self.modifier is not None:
-            self.text = repeat_text("#","b",self.modifier) + self.text
+            self.text = repeat_text("#", "b", self.modifier) + self.text
 
     def get_note(self):
         """Getter for note"""
@@ -382,7 +382,9 @@ class Chord(Event):
         self.freqs = freqs
         self.octaves = octaves
         self.durations = durations
+        self.duration = durations[0]
         self.beats = beats
+        self.text = "".join([val.text for val in self.pitch_classes])
 
 
 @dataclass(kw_only=True)
@@ -394,6 +396,7 @@ class RomanNumeral(Event):
     notes: list[int] = field(default=None, init=False)
     pitch_classes: list = field(default=None, init=False)
     inversions: int = field(default=None)
+    evaluated_chord: Chord = None
 
     def set_notes(self, chord_notes: list[int]):
         """Set notes to roman numeral
@@ -413,6 +416,42 @@ class RomanNumeral(Event):
             self.pitch_classes = []
         for pitch in pitches:
             self.pitch_classes.append(Pitch(**pitch))
+
+    def evaluate_chord(self, options: dict) -> Chord:
+        """Create chord fom roman numeral"""
+        key = options["key"]
+        scale = options["scale"]
+        pitch_text = ""
+        pitch_classes = []
+        self.notes = chord_from_degree(
+            self.value, self.chord_type, options["scale"], options["key"]
+        )
+        for note in self.notes:
+            pitch_dict = midi_to_pitch_class(note, key, scale)
+            pitch_classes.append(
+                Pitch(
+                    pitch_class=pitch_dict["pitch_class"],
+                    note=note,
+                    freq=midi_to_freq(note),
+                    kwargs=(options | pitch_dict),
+                )
+            )
+            pitch_text += pitch_dict["text"]
+
+        chord = Chord(
+            text=pitch_text,
+            pitch_classes=pitch_classes,
+            duration=options["duration"],
+            notes=self.notes,
+            kwargs=options,
+            inversions=self.inversions,
+        )
+
+        chord.update_notes(options)
+
+        self.evaluated_chord = chord
+
+        return chord
 
 
 @dataclass(kw_only=True)
@@ -456,6 +495,9 @@ class Sequence(Meta):
 
     def __getitem__(self, index):
         return self.values[index]
+
+    def __len__(self):
+        return len(self.values)
 
     def update_local_options(self):
         """Update value attributes from dict"""
@@ -558,7 +600,7 @@ class Sequence(Meta):
                     item.update_options(options)
                     item.update_notes(options)
                 elif isinstance(item, RomanNumeral):
-                    item = _create_chord_from_roman(item, options)
+                    item = item.evaluate_chord(options)
             return item
 
         def _generative_repeat(tree: list, times: int, options: dict):
@@ -636,40 +678,6 @@ class Sequence(Meta):
                 kwargs=merged_options,
             )
             return new_pitch
-
-        def _create_chord_from_roman(current: RomanNumeral, options: dict) -> Chord:
-            """Create chord fom roman numeral"""
-            key = options["key"]
-            scale = options["scale"]
-            pitch_text = ""
-            pitch_classes = []
-            current.notes = chord_from_degree(
-                current.value, current.chord_type, options["scale"], options["key"]
-            )
-            for note in current.notes:
-                pitch_dict = midi_to_pitch_class(note, key, scale)
-                pitch_classes.append(
-                    Pitch(
-                        pitch_class=pitch_dict["pitch_class"],
-                        note=note,
-                        freq=midi_to_freq(note),
-                        kwargs=(options | pitch_dict),
-                    )
-                )
-                pitch_text += pitch_dict["text"]
-
-            chord = Chord(
-                text=pitch_text,
-                pitch_classes=pitch_classes,
-                duration=options["duration"],
-                notes=current.notes,
-                kwargs=options,
-                inversions=current.inversions,
-            )
-
-            chord.update_notes(options)
-
-            return chord
 
         # Start of the main function: Evaluate and flatten the Ziffers object tree
         values = self.evaluated_values if eval_tree else self.values
@@ -978,23 +986,31 @@ class ListOperation(Sequence):
     def evaluate(self, options=DEFAULT_OPTIONS.copy()):
         """Evaluates the operation"""
 
-        def filter_operation(input_list, options):
-            flattened_list = []
+        def _filter_whitespace(input_list):
+            for item in input_list:
+                if isinstance(item, Meta):
+                    yield item
 
+        def _filter_operation(input_list, options):
+            """Filter and evaluate values"""
+            flattened_list = []
             for item in input_list:
                 if isinstance(item, (list, Sequence)):
                     if isinstance(item, ListOperation):
                         flattened_list.extend(item.evaluated_values)
                     else:
-                        flattened_list.append(filter_operation(item, options))
+                        flattened_list.append(_filter_operation(item, options))
                 elif isinstance(item, Cyclic):
                     value = item.get_value()
                     if isinstance(value, Sequence):
-                        flattened_list.extend(filter_operation(value, options))
+                        flattened_list.extend(_filter_operation(value, options))
                     elif isinstance(value, (Event, RandomInteger, Integer)):
                         flattened_list.append(value)
                 elif isinstance(item, Modification):
                     options = options | item.as_options()
+                elif isinstance(item, RomanNumeral):
+                    item = item.evaluate_chord(options)
+                    flattened_list.append(item)
                 elif isinstance(item, Range):
                     flattened_list.extend(list(item.evaluate(options)))
                 elif isinstance(item, (Event, RandomInteger, Integer)):
@@ -1006,9 +1022,123 @@ class ListOperation(Sequence):
 
             return flattened_list
 
+        def _vertical_arpeggio(left, right, options):
+            """Vertical arpeggio operation, eg. (135)@(q 1 2 021)"""
+            left = _filter_operation(left, options)
+            right = _filter_operation(right, options)
+            left = list(left.evaluate_tree(options))
+            right = list(right.evaluate_tree(options))
+            arp_items = []
+
+            for item in left:
+                for index in right:
+                    pcs = item.pitch_classes
+                    if isinstance(index, Pitch):
+                        new_pitch = deepcopy(pcs[index.get_value(options) % len(pcs)])
+                        new_pitch.duration = index.duration
+                        arp_items.append(new_pitch)
+                    else:  # Should be a chord
+                        new_pitches = []
+                        for pitch in index.pitch_classes:
+                            new_pitch = deepcopy(
+                                pcs[pitch.get_value(options) % len(pcs)]
+                            )
+                            new_pitch.duration = pitch.duration
+                            new_pitches.append(new_pitch)
+                        new_chord = Chord(pitch_classes=new_pitches, kwargs=options)
+                        new_chord.update_notes()
+                        new_chord.text = "".join(
+                            [val.text for val in new_chord.pitch_classes]
+                        )
+                        arp_items.append(new_chord)
+
+            return Sequence(values=arp_items)
+
+        def _horizontal_arpeggio(left, right, options):
+            """Horizontal arpeggio operation, eg. (1 2 3 4)#(0 3 2 1)"""
+            left = _filter_operation(left, options)
+            right = _filter_operation(right, options)
+            left = list(left.evaluate_tree(options))
+            right = list(right.evaluate_tree(options))
+            arp_items = []
+            for index in right:
+                new_item = deepcopy(left[index.get_value(options) % len(left)])
+                arp_items.append(new_item)
+            return Sequence(values=arp_items)
+
+        def _cyclic_zip(left, right, options):
+            """Cyclic zip operaiton, eg. (q e)<>(1 2 3)"""
+            left = list(_filter_whitespace(left))
+            right = list(_filter_whitespace(right))
+            result = Sequence(values=cyclic_zip(left, right))
+            return _filter_operation(result, options)
+
+        def _python_operations(left, right, options):
+            """Python math operations"""
+
+            def __chord_operation(chord, pitch_y, yass, options):
+                """Operation for single chords"""
+                new_pitches = []
+                pitch_y = pitch_y.get_value(options)
+                for pitch_x in chord.pitch_classes:
+                    pitch_x = pitch_x.pitch_class
+                    new_pitch = Pitch(
+                        pitch_class=operation(
+                            pitch_y if yass else pitch_x, pitch_x if yass else pitch_y
+                        ),
+                        kwargs=options,
+                    )
+                    new_pitches.append(new_pitch)
+                new_chord = Chord(pitch_classes=new_pitches, kwargs=options)
+                new_chord.update_notes()
+                return new_chord
+
+            # _python_operation starts. Filter & evaluate items.
+
+            left = _filter_operation(left, options)
+            if isinstance(right, (Sequence, Cyclic)):
+                right = _filter_operation(right, options)
+
+            # Create product of items.
+            pairs = product(
+                (right.values if isinstance(right, Sequence) else [right]), left
+            )
+
+            results = []
+            for first, second in pairs:
+                if isinstance(first, Chord) and isinstance(second, Chord):
+                    new_pitches = []
+                    for pitch_x in first.pitch_classes:
+                        for pitch_y in second.pitch_classes:
+                            new_pitch = Pitch(
+                                pitch_class=operation(
+                                    pitch_x.pitch_class, pitch_y.pitch_class
+                                ),
+                                kwargs=options,
+                            )
+                            new_pitches.append(new_pitch)
+                        new_chord = Chord(pitch_classes=new_pitches, kwargs=options)
+                        new_chord.update_notes()
+                        outcome = new_chord
+                elif isinstance(first, Chord):
+                    outcome = __chord_operation(first, second, False, options)
+                elif isinstance(second, Chord):
+                    outcome = __chord_operation(second, first, True, options)
+                else:
+                    outcome = Pitch(
+                        pitch_class=operation(
+                            first.get_value(options), second.get_value(options)
+                        ),
+                        kwargs=second.get_options(),
+                    )
+                results.append(outcome)
+            return results
+
+        # Start of the evaluate() function
+
         operators = self.values[1::2]  # Fetch every second operator element
         values = self.values[::2]  # Fetch every second list element
-        values = filter_operation(values, options)  # Filter out
+        # values = _filter_operation(values, options)  # Filter out
         if len(values) == 1:
             return values[0]  # If right hand doesnt contain anything sensible
         left = values[0]  # Start results with the first array
@@ -1016,16 +1146,15 @@ class ListOperation(Sequence):
         for i, operand in enumerate(operators):
             operation = operand.value
             right = values[i + 1]
-            pairs = product(
-                (right.values if isinstance(right, Sequence) else [right]), left
-            )
-            left = [
-                Pitch(
-                    pitch_class=operation(x.get_value(options), y.get_value(options)),
-                    kwargs=y.get_options(),
-                )
-                for (x, y) in pairs
-            ]
+            if isinstance(operation, str):
+                if operation == "vertical":
+                    left = _vertical_arpeggio(left, right, options)
+                elif operation == "horizontal":
+                    left = _horizontal_arpeggio(left, right, options)
+                if operation == "zip":
+                    left = _cyclic_zip(left, right, options)
+            else:
+                left = _python_operations(left, right, options)
         return left
 
 

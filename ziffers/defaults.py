@@ -59,7 +59,10 @@ OPERATORS = MappingProxyType({
     "|": operator.or_,
     "&": operator.and_,
     "<<": operator.ilshift,
-    ">>": operator.irshift
+    ">>": operator.irshift,
+    "@": "vertical",
+    "#": "horizontal",
+    "<>": "zip"
 })
 
 
