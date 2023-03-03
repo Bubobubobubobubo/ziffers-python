@@ -29,7 +29,7 @@ from .classes import (
     RepeatedSequence,
     VariableAssignment,
     Variable,
-    Measure,
+    Measure
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS, OPERATORS

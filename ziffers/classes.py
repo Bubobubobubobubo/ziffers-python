@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field, replace, asdict
 from itertools import product, islice, cycle
 from math import floor
+from types import LambdaType
 import operator
 import random
 from copy import deepcopy
@@ -458,7 +459,7 @@ class RomanNumeral(Event):
 class Function(Event):
     """Class for functions"""
 
-    run: str = field(default=None)
+    run: ... = field(default=None)
 
 
 @dataclass(kw_only=True)
@@ -560,7 +561,10 @@ class Sequence(Meta):
                     options[item.variable.name] = item.value
             elif isinstance(item, Variable):
                 if options[item.name]:
-                    variable = deepcopy(options[item.name])
+                    opt_item = options[item.name]
+                    if isinstance(opt_item, LambdaType):
+                        yield Function(run=opt_item, text=item.text, kwargs=options)
+                    variable = deepcopy(opt_item)
                     yield from _resolve_item(variable, options)
             elif isinstance(item, Range):
                 yield from item.evaluate(options)
