@@ -2,7 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 from lark import Lark
-from .classes import Ziffers
+from .classes.root import Ziffers
 from .mapper import ZiffersTransformer
 
 

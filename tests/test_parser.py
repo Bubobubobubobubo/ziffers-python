@@ -178,3 +178,14 @@ def test_romans(pattern: str, expected: list):
 )
 def test_romans_pcs(pattern: str, expected: list):
     assert collect(zparse(pattern),len(expected)*2,"pitches") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+     ("(i)+<0 1 2>", [[60, 64, 67], [62, 65, 69], [64, 67, 71], [60, 64, 67]]),
+     ("(i)+<0 <1 2>>",[[60, 64, 67], [62, 65, 69], [60, 64, 67], [64, 67, 71]])
+    ]
+)
+def test_cycles(pattern: str, expected: list):
+    zparse.cache_clear() # Clear cache for cycles
+    assert collect(zparse(pattern),4,"note") == expected

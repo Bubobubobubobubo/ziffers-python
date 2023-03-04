@@ -31,6 +31,150 @@ from .items import (
     Whitespace,
 )
 
+# TODO: Could be refactored to each class?
+def resolve_item(item: Meta, options: dict):
+    """Resolve cyclic value"""
+    if isinstance(item, Sequence):
+        if isinstance(item, ListOperation):
+            yield from item.evaluate(options)
+        elif isinstance(item, (RepeatedSequence, RepeatedListSequence)):
+            yield from  item.resolve_repeat(options)
+        elif isinstance(item, Subdivision):
+            item.evaluate_values(options)
+            yield item
+        else:
+            yield from item.evaluate_tree(options)
+    elif isinstance(item, VariableAssignment):
+        if item.pre_eval:
+            pre_options = options.copy()
+            pre_options["pre_eval"] = True
+            options[item.variable.name] = Sequence(
+                values=list(resolve_item(item.value, pre_options))
+            )
+        else:
+            options[item.variable.name] = item.value
+    elif isinstance(item, Variable):
+        if options[item.name]:
+            if item.name in options:
+                opt_item = options[item.name]
+                if isinstance(opt_item, LambdaType):
+                    yield Function(run=opt_item, text=item.text, kwargs=options)
+                variable = deepcopy(opt_item)
+                yield from resolve_item(variable, options)
+    elif isinstance(item, VariableList):
+        seqlist = []
+        for var in item.values:
+            if var.name in options:
+                opt_item = options[var.name]
+                if isinstance(opt_item, LambdaType):
+                    seqlist.append(
+                        Function(run=opt_item, text=var.text, kwargs=options)
+                    )
+                elif isinstance(opt_item, Sequence):
+                    seqlist.append(opt_item)
+        if len(seqlist) > 0:
+            yield PolyphonicSequence(values=seqlist)
+    elif isinstance(item, Range):
+        yield from item.evaluate(options)
+    elif isinstance(item, Cyclic):
+        yield from resolve_item(item.get_value(), options)
+    elif isinstance(item, Euclid):
+        yield from euclidean_items(item, options)
+    elif isinstance(item, Modification):
+        update_modifications(item, options)
+    elif isinstance(item, Measure):
+        item.reset_options(options)
+    elif isinstance(item, Meta):  # Filters whitespace
+        yield update_item(item, options)
+
+def resolve_integer_value(item, options):
+    """Helper for resolving integer value of different types"""
+    while isinstance(item, Cyclic):
+        item = item.get_value(options)
+    if isinstance(item, Pitch):
+        return item.get_value(options)
+    if isinstance(item, Integer):
+        return item.get_value(options)
+    return item
+
+def update_item(item, options):
+    """Update or create new pitch"""
+    if set(("key", "scale")) <= options.keys():
+        if isinstance(item, Pitch):
+            item.update_options(options)
+            item.update_note()
+            if options.get("pre_eval", False):
+                item.duration = options["duration"]
+        if isinstance(item, Rest):
+            item.update_options(options)
+        elif isinstance(item, (RandomPitch, RandomInteger)):
+            item = create_pitch(item, options)
+        elif isinstance(item, Chord):
+            item.update_options(options)
+            item.update_notes(options)
+        elif isinstance(item, RomanNumeral):
+            item = item.evaluate_chord(options)
+    return item
+
+def euclidean_items(euclid: Item, options: dict):
+    """Loops values from generated euclidean sequence"""
+    euclid.evaluate(options)
+    for item in euclid.evaluated_values:
+        yield from resolve_item(item, options)
+
+def update_modifications(current: Item, options: dict) -> dict:
+    """Update options based on current item"""
+    if isinstance(current, (OctaveChange, DurationChange)):
+        options[current.key] = current.value
+    elif isinstance(current, OctaveAdd):
+        if current.key in options:  # Add to existing value
+            options[current.key] += current.value
+        else:  # Create value if not existing
+            options[current.key] = current.value
+
+def create_pitch(current: Item, options: dict) -> Pitch:
+    """Create pitch based on values and options"""
+
+    merged_options = options | current.local_options
+
+    if "modifier" in merged_options:
+        c_modifier = merged_options["modifier"]
+    else:
+        c_modifier = 0
+
+    if hasattr(current, "modifier") and current.modifier is not None:
+        c_modifier += current.modifier
+
+    if "octave" in merged_options:
+        c_octave = merged_options["octave"]
+        if "octave" in options:
+            c_octave = options["octave"] + c_octave
+    else:
+        c_octave = 0
+
+    if hasattr(current, "octave") and current.octave is not None:
+        c_octave += current.octave
+
+    current_value = current.get_value(merged_options)
+
+    note = note_from_pc(
+        root=merged_options["key"],
+        pitch_class=current_value,
+        intervals=merged_options["scale"],
+        modifier=c_modifier,
+        octave=c_octave,
+    )
+    new_pitch = Pitch(
+        pitch_class=current_value,
+        text=str(current_value),
+        note=note,
+        freq=midi_to_freq(note),
+        octave=c_octave,
+        modifier=c_modifier,
+        kwargs=merged_options,
+    )
+    return new_pitch
+
 
 @dataclass(kw_only=True)
 class Sequence(Meta):
@@ -83,178 +227,10 @@ class Sequence(Meta):
             eval_tree (bool, optional): Flag for using the evaluated subtree. Defaults to False.
         """
 
-        def _resolve_item(item: Meta, options: dict):
-            """Resolve cyclic value"""
-            if isinstance(item, Sequence):
-                if isinstance(item, ListOperation):
-                    yield from item.evaluate(options)
-                elif isinstance(item, RepeatedSequence):
-                    item.evaluate_values(options)
-                    repeats = item.repeats.get_value(options)
-                    if not isinstance(repeats, int):
-                        repeats = _resolve_repeat_value(repeats)
-                    yield from _normal_repeat(item.evaluated_values, repeats, options)
-                elif isinstance(item, RepeatedListSequence):
-                    repeats = item.repeats.get_value(options)
-                    if not isinstance(repeats, int):
-                        repeats = _resolve_repeat_value(repeats)
-                    yield from _generative_repeat(item, repeats, options)
-                elif isinstance(item, Subdivision):
-                    item.evaluate_values(options)
-                    yield item
-                else:
-                    yield from item.evaluate_tree(options)
-            elif isinstance(item, VariableAssignment):
-                if item.pre_eval:
-                    pre_options = options.copy()
-                    pre_options["pre_eval"] = True
-                    options[item.variable.name] = Sequence(
-                        values=list(_resolve_item(item.value, pre_options))
-                    )
-                else:
-                    options[item.variable.name] = item.value
-            elif isinstance(item, Variable):
-                if options[item.name]:
-                    if item.name in options:
-                        opt_item = options[item.name]
-                        if isinstance(opt_item, LambdaType):
-                            yield Function(run=opt_item, text=item.text, kwargs=options)
-                        variable = deepcopy(opt_item)
-                        yield from _resolve_item(variable, options)
-            elif isinstance(item, VariableList):
-                seqlist = []
-                for var in item.values:
-                    if var.name in options:
-                        opt_item = options[var.name]
-                        if isinstance(opt_item, LambdaType):
-                            seqlist.append(
-                                Function(run=opt_item, text=var.text, kwargs=options)
-                            )
-                        elif isinstance(opt_item, Sequence):
-                            seqlist.append(opt_item)
-                if len(seqlist) > 0:
-                    yield PolyphonicSequence(values=seqlist)
-            elif isinstance(item, Range):
-                yield from item.evaluate(options)
-            elif isinstance(item, Cyclic):
-                yield from _resolve_item(item.get_value(), options)
-            elif isinstance(item, Euclid):
-                yield from _euclidean_items(item, options)
-            elif isinstance(item, Modification):
-                options = _parse_options(item, options)
-            elif isinstance(item, Measure):
-                item.reset_options(options)
-            elif isinstance(item, Meta):  # Filters whitespace
-                yield _update_item(item, options)
-
-        def _resolve_repeat_value(item):
-            while isinstance(item, Cyclic):
-                item = item.get_value(options)
-            if isinstance(item, Pitch):
-                return item.get_value(options)
-            if isinstance(item, Integer):
-                return item.get_value(options)
-            return item
-
-        def _update_item(item, options):
-            """Update or create new pitch"""
-            if set(("key", "scale")) <= options.keys():
-                if isinstance(item, Pitch):
-                    item.update_options(options)
-                    item.update_note()
-                    if options.get("pre_eval", False):
-                        item.duration = options["duration"]
-                if isinstance(item, Rest):
-                    item.update_options(options)
-                elif isinstance(item, (RandomPitch, RandomInteger)):
-                    item = _create_pitch(item, options)
-                elif isinstance(item, Chord):
-                    item.update_options(options)
-                    item.update_notes(options)
-                elif isinstance(item, RomanNumeral):
-                    item = item.evaluate_chord(options)
-            return item
-
-        def _generative_repeat(tree: list, times: int, options: dict):
-            """Repeats items and generates new random values"""
-            for _ in range(times):
-                for item in tree.evaluate_tree(options):
-                    yield from _resolve_item(item, options)
-
-        def _normal_repeat(tree: list, times: int, options: dict):
-            """Repeats items with the same random values"""
-            for _ in range(times):
-                for item in tree:
-                    yield from _resolve_item(item, options)
-
-        def _euclidean_items(euclid: Item, options: dict):
-            """Loops values from generated euclidean sequence"""
-            euclid.evaluate(options)
-            for item in euclid.evaluated_values:
-                yield from _resolve_item(item, options)
-
-        def _loop_items(items, options):
-            for item in items:
-                yield from _resolve_item(item, options)
-
-        def _parse_options(current: Item, options: dict) -> dict:
-            """Update options based on current item"""
-            if isinstance(current, (OctaveChange, DurationChange)):
-                options[current.key] = current.value
-            elif isinstance(current, OctaveAdd):
-                if current.key in options:  # Add to existing value
-                    options[current.key] += current.value
-                else:  # Create value if not existing
-                    options[current.key] = current.value
-            return options
-
-        def _create_pitch(current: Item, options: dict) -> Pitch:
-            """Create pitch based on values and options"""
-
-            merged_options = options | self.local_options
-
-            if "modifier" in merged_options:
-                c_modifier = merged_options["modifier"]
-            else:
-                c_modifier = 0
-
-            if hasattr(current, "modifier") and current.modifier is not None:
-                c_modifier += current.modifier
-
-            if "octave" in merged_options:
-                c_octave = merged_options["octave"]
-                if "octave" in options:
-                    c_octave = options["octave"] + c_octave
-            else:
-                c_octave = 0
-
-            if hasattr(current, "octave") and current.octave is not None:
-                c_octave += current.octave
-
-            current_value = current.get_value(merged_options)
-
-            note = note_from_pc(
-                root=merged_options["key"],
-                pitch_class=current_value,
-                intervals=merged_options["scale"],
-                modifier=c_modifier,
-                octave=c_octave,
-            )
-            new_pitch = Pitch(
-                pitch_class=current_value,
-                text=str(current_value),
-                note=note,
-                freq=midi_to_freq(note),
-                octave=c_octave,
-                modifier=c_modifier,
-                kwargs=merged_options,
-            )
-            return new_pitch
-
         # Start of the main function: Evaluate and flatten the Ziffers object tree
         values = self.evaluated_values if eval_tree else self.values
         for item in values:
-            yield from _resolve_item(item, options)
+            yield from resolve_item(item, options)
 
     def filter(self, keep: tuple):
         """Filter out items from sequence.
@@ -272,6 +248,7 @@ class Sequence(Meta):
 
 @dataclass(kw_only=True)
 class PolyphonicSequence:
+    """Class for polyphonic sequence"""
     values: list
 
 
@@ -290,6 +267,15 @@ class RepeatedListSequence(Sequence):
     repeats: RandomInteger | Integer = field(default_factory=Integer(value=1, text="1"))
     wrap_start: str = field(default="(:", repr=False)
     wrap_end: str = field(default=":)", repr=False)
+
+    def resolve_repeat(self, options: dict):
+        """Repeats items and generates new random values"""
+        repeats = self.repeats.get_value(options)
+        if not isinstance(repeats, int):
+            repeats = resolve_integer_value(repeats, options)
+        for _ in range(repeats):
+            for item in self.evaluate_tree(options):
+                yield from resolve_item(item, options)
 
 
 @dataclass(kw_only=True)
@@ -338,6 +324,11 @@ class ListOperation(Sequence):
                 if isinstance(item, (list, Sequence)):
                     if isinstance(item, ListOperation):
                         flattened_list.extend(item.evaluated_values)
+                    elif isinstance(item, Subdivision):
+                        item.evaluate_values(options)
+                        flattened_list.extend(list(item.evaluate_durations()))
+                    elif isinstance(item, RepeatedListSequence):
+                        flattened_list.extend(list(item.resolve_repeat(options)))
                     else:
                         flattened_list.append(_filter_operation(item, options))
                 elif isinstance(item, Cyclic):
@@ -422,6 +413,7 @@ class ListOperation(Sequence):
                 pitch_y = pitch_y.get_value(options)
                 for pitch_x in chord.pitch_classes:
                     pitch_x = pitch_x.pitch_class
+                    pitch_y = resolve_integer_value(pitch_y, options)
                     new_pitch = Pitch(
                         pitch_class=operation(
                             pitch_y if yass else pitch_x, pitch_x if yass else pitch_y
@@ -522,6 +514,16 @@ class RepeatedSequence(Sequence):
     wrap_end: str = field(default=":]", repr=False)
 
     evaluated_values: list = None
+
+    def resolve_repeat(self, options):
+        """Resolves all items"""
+        self.evaluate_values(options)
+        repeats = self.repeats.get_value(options)
+        if not isinstance(repeats, int):
+            repeats = resolve_integer_value(repeats, options)
+        for _ in range(repeats):
+            for item in self.evaluated_values:
+                yield from resolve_item(item, options)
 
     def evaluate_values(self, options):
         """Evaluate values and store to evaluated_values"""
