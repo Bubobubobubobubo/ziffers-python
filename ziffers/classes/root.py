@@ -30,6 +30,9 @@ class Ziffers(Sequence):
             self.loop_i = index % self.cycle_length
         return self.evaluated_values[self.loop_i]
 
+    def __len__(self):
+        return len(self.evaluated_values)
+    
     def __iter__(self):
         return self
 
