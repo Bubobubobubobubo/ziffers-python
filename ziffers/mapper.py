@@ -1,7 +1,17 @@
 """ Lark transformer for mapping Lark tokens to Ziffers objects """
 from lark import Transformer, Token
-from .classes import (
-    Ziffers,
+from .classes.root import Ziffers
+from .classes.sequences import (
+    Sequence,
+    ListSequence,
+    RepeatedListSequence,
+    ListOperation,
+    RepeatedSequence,
+    Euclid,
+    Subdivision,
+    Eval,
+)
+from .classes.items import (
     Whitespace,
     DurationChange,
     OctaveChange,
@@ -12,24 +22,17 @@ from .classes import (
     RandomPercent,
     Chord,
     RomanNumeral,
-    Sequence,
-    ListSequence,
-    RepeatedListSequence,
-    Subdivision,
     Cyclic,
     RandomInteger,
     Range,
     Operator,
-    ListOperation,
     Operation,
-    Eval,
     Atom,
     Integer,
-    Euclid,
-    RepeatedSequence,
     VariableAssignment,
     Variable,
-    Measure
+    VariableList,
+    Measure,
 )
 from .common import flatten, sum_dict
 from .defaults import DEFAULT_DURS, OPERATORS
@@ -336,6 +339,10 @@ class ZiffersTransformer(Transformer):
     def variable(self, items):
         """Return parsed variable name"""
         return Variable(name=items[0].value, text=items[0].value)
+
+    def variablelist(self, items):
+        """Return list of variables"""
+        return VariableList(values=items, text="".join([item.text for item in items]))
 
     # List rules
 
