@@ -99,14 +99,15 @@ def cyclic_zip(first: list, second: list) -> list:
     """Cyclic zip method
 
     Args:
-        first (list): First list
+        first (list): First list is cycled
         second (list): Second list
 
     Returns:
         list: Cyclicly zipped list
     """
-    max_length = max(len(first), len(second))
     result = []
-    for i in range(max_length):
-        result.append([first[i % len(first)], second[i % len(second)]])
+    s_length = len(second)
+    f_length = len(first)
+    for i in range(s_length):
+        result.append([first[i % f_length], second[i]])
     return [deepcopy(item) for sublist in result for item in sublist]

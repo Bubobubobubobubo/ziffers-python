@@ -64,12 +64,14 @@ def resolve_item(item: Meta, options: dict):
                         run=opt_item,
                         text=item.text,
                         kwargs=(options | item.local_options),
+                        local_options=item.local_options
                     )
                 elif isinstance(opt_item, str):
                     yield Sample(
                         name=opt_item,
                         text=item.text,
                         kwargs=(options | item.local_options),
+                        local_options=item.local_options
                     )
                 variable = deepcopy(opt_item)
                 yield from resolve_item(variable, options)
@@ -84,6 +86,7 @@ def resolve_item(item: Meta, options: dict):
                             run=opt_item,
                             text=var.text,
                             kwargs=(options | var.local_options),
+                            local_options=var.local_options
                         )
                     )
                 elif isinstance(opt_item, str):
@@ -92,6 +95,7 @@ def resolve_item(item: Meta, options: dict):
                             name=opt_item,
                             text=var.text,
                             kwargs=(options | var.local_options),
+                            local_options=var.local_options
                         )
                     )
                 elif isinstance(opt_item, Sequence):
@@ -376,6 +380,7 @@ class ListOperation(Sequence):
                     flattened_list.extend(list(item.evaluate(options)))
                 elif isinstance(item, (Event, RandomInteger, Integer)):
                     item.update_options(options)
+                    item = update_item(item, options)
                     flattened_list.append(item)
 
             if isinstance(input_list, Sequence):
