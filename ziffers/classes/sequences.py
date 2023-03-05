@@ -357,8 +357,10 @@ class ListOperation(Sequence):
             """Vertical arpeggio operation, eg. (135)@(q 1 2 021)"""
             left = _filter_operation(left, options)
             right = _filter_operation(right, options)
-            left = list(left.evaluate_tree(options))
-            right = list(right.evaluate_tree(options))
+            if not isinstance(left,list):
+                left = list(left.evaluate_tree(options))
+            if not isinstance(right,list):
+                right = list(right.evaluate_tree(options))
             arp_items = []
 
             for item in left:

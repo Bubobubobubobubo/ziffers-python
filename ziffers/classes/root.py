@@ -155,3 +155,25 @@ class Ziffers(Sequence):
             for val in self.evaluated_values
             if isinstance(val, (Pitch, Chord))
         ]
+    
+    def collect(self, num: int = None, keys: str | list = None) -> list:
+        """Collect n items from parsed Ziffers"""
+        if num is None:
+            num = len(self.evaluated_values)
+        if keys is None or isinstance(keys, str):
+            keys = [keys]
+        all_items = []
+        values = []
+        for key in keys:
+            for i in range(num):
+                if key is not None:
+                    values.append(getattr(self[i], key, None))
+                else:
+                    values.append(self[i])
+            all_items.append(values)
+            values = []
+        if len(all_items) > 1:
+            return all_items
+        if len(all_items) == 1:
+            return all_items[0]
+        return None

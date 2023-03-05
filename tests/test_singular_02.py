@@ -1,6 +1,6 @@
 """ Test cases for the parser """
 import pytest
-from ziffers import zparse, collect
+from ziffers import zparse, get_items
 
 # pylint: disable=missing-function-docstring, line-too-long, invalid-name
 
@@ -52,7 +52,7 @@ def test_parsing_text(pattern: str):
     ],
 )
 def test_pitch_classes(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"pitch_class") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"pitch_class") == expected*2
 
 
 @pytest.mark.parametrize(
@@ -64,7 +64,7 @@ def test_pitch_classes(pattern: str, expected: list):
     ]
 )
 def test_pitch_octaves(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"octave") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"octave") == expected*2
 
 
 @pytest.mark.parametrize(
@@ -77,7 +77,7 @@ def test_pitch_octaves(pattern: str, expected: list):
     ]
 )
 def test_subdivisions(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"duration") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -89,7 +89,7 @@ def test_subdivisions(pattern: str, expected: list):
     ]
 )
 def test_repeats(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"note") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -104,7 +104,7 @@ def test_repeats(pattern: str, expected: list):
     ]
 )
 def test_repeat_durations(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"duration") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -130,7 +130,7 @@ def test_looping_durations(pattern: str, expected: list):
     ]
 )
 def test_measure_durations(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"duration") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -139,7 +139,7 @@ def test_measure_durations(pattern: str, expected: list):
     ]
 )
 def test_measure_octaves(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"octave") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"octave") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -148,7 +148,7 @@ def test_measure_octaves(pattern: str, expected: list):
     ]
 )
 def test_rest(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"duration") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"duration") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -157,7 +157,7 @@ def test_rest(pattern: str, expected: list):
     ]
 )
 def test_ranges(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"note") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -166,7 +166,7 @@ def test_ranges(pattern: str, expected: list):
     ]
 )
 def test_romans(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"note") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"note") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -177,7 +177,7 @@ def test_romans(pattern: str, expected: list):
     ]
 )
 def test_romans_pcs(pattern: str, expected: list):
-    assert collect(zparse(pattern),len(expected)*2,"pitches") == expected*2
+    assert get_items(zparse(pattern),len(expected)*2,"pitches") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -188,4 +188,4 @@ def test_romans_pcs(pattern: str, expected: list):
 )
 def test_cycles(pattern: str, expected: list):
     zparse.cache_clear() # Clear cache for cycles
-    assert collect(zparse(pattern),4,"note") == expected
+    assert get_items(zparse(pattern),4,"note") == expected

@@ -2,8 +2,6 @@
 import pytest
 from ziffers import scale
 
-
-
 @pytest.mark.parametrize(
     "name,expected",
     [

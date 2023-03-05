@@ -53,7 +53,6 @@ def z(expr: str, **opts) -> Ziffers:
     """Shortened method name for zparse"""
     return zparse(expr, **opts)
 
-
 def yield_items(gen: Ziffers, num: int, key: str = None) -> list:
     """Yield n items from parsed Ziffers"""
     for i in range(num):
@@ -62,7 +61,7 @@ def yield_items(gen: Ziffers, num: int, key: str = None) -> list:
         else:
             yield gen[i]
 
-def collect(gen: Ziffers, num: int, key: str = None) -> list:
-    """Collect n-item from parsed Ziffers"""
+def get_items(gen: Ziffers, num: int, key: str = None) -> list:
+    """Get n-item from parsed Ziffers. Functional alternative to Ziffers-object collect method."""
     return list(yield_items(gen,num,key))
     

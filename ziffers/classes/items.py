@@ -133,6 +133,10 @@ class Event(Item):
 
     duration: float = field(default=None)
 
+    def get_duration(self):
+        """Getter for duration"""
+        return self.duration
+
 
 @dataclass
 class Rest(Event):
@@ -201,10 +205,6 @@ class Pitch(Event):
     def get_pitch_class(self):
         """Getter for pitche"""
         return self.pitch_class
-
-    def get_duration(self):
-        """Getter for duration"""
-        return self.duration
 
     def update_note(self, force: bool = False):
         """Update note if Key, Scale and Pitch-class are present"""
