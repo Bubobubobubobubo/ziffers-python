@@ -337,8 +337,15 @@ class ZiffersTransformer(Transformer):
         return items[0].value
 
     def variable(self, items):
+        if len(items)>1:
+            prefixes = sum_dict(items[0:-1])
+            text_prefix = prefixes.pop("text")
+            return Variable(name=items[-1], text=text_prefix+items[-1], local_options=prefixes)
+        return Variable(name=items[0], text=items[0])
+    
+    def variable_char(self, items):
         """Return parsed variable name"""
-        return Variable(name=items[0].value, text=items[0].value)
+        return items[0].value #Variable(name=items[0].value, text=items[0].value)
 
     def variablelist(self, items):
         """Return list of variables"""

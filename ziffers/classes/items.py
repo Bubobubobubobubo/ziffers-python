@@ -480,6 +480,13 @@ class Variable(Event):
 
 
 @dataclass(kw_only=True)
+class Sample(Event):
+    """Class for samples"""
+
+    name: str
+
+
+@dataclass(kw_only=True)
 class VariableList(Item):
     """Class for using variables"""
 

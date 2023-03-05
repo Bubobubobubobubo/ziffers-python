@@ -29,7 +29,9 @@ from .items import (
     Function,
     Modification,
     Whitespace,
+    Sample,
 )
+
 
 # TODO: Could be refactored to each class?
 def resolve_item(item: Meta, options: dict):
@@ -38,7 +40,7 @@ def resolve_item(item: Meta, options: dict):
         if isinstance(item, ListOperation):
             yield from item.evaluate(options)
         elif isinstance(item, (RepeatedSequence, RepeatedListSequence)):
-            yield from  item.resolve_repeat(options)
+            yield from item.resolve_repeat(options)
         elif isinstance(item, Subdivision):
             item.evaluate_values(options)
             yield item
@@ -58,7 +60,17 @@ def resolve_item(item: Meta, options: dict):
             if item.name in options:
                 opt_item = options[item.name]
                 if isinstance(opt_item, LambdaType):
-                    yield Function(run=opt_item, text=item.text, kwargs=options)
+                    yield Function(
+                        run=opt_item,
+                        text=item.text,
+                        kwargs=(options | item.local_options),
+                    )
+                elif isinstance(opt_item, str):
+                    yield Sample(
+                        name=opt_item,
+                        text=item.text,
+                        kwargs=(options | item.local_options),
+                    )
                 variable = deepcopy(opt_item)
                 yield from resolve_item(variable, options)
     elif isinstance(item, VariableList):
@@ -68,7 +80,19 @@ def resolve_item(item: Meta, options: dict):
                 opt_item = options[var.name]
                 if isinstance(opt_item, LambdaType):
                     seqlist.append(
-                        Function(run=opt_item, text=var.text, kwargs=options)
+                        Function(
+                            run=opt_item,
+                            text=var.text,
+                            kwargs=(options | var.local_options),
+                        )
+                    )
+                elif isinstance(opt_item, str):
+                    seqlist.append(
+                        Sample(
+                            name=opt_item,
+                            text=var.text,
+                            kwargs=(options | var.local_options),
+                        )
                     )
                 elif isinstance(opt_item, Sequence):
                     seqlist.append(opt_item)
@@ -87,6 +111,7 @@ def resolve_item(item: Meta, options: dict):
     elif isinstance(item, Meta):  # Filters whitespace
         yield update_item(item, options)
 
+
 def resolve_integer_value(item, options):
     """Helper for resolving integer value of different types"""
     while isinstance(item, Cyclic):
@@ -96,6 +121,7 @@ def resolve_integer_value(item, options):
     if isinstance(item, Integer):
         return item.get_value(options)
     return item
+
 
 def update_item(item, options):
     """Update or create new pitch"""
@@ -116,11 +142,13 @@ def update_item(item, options):
             item = item.evaluate_chord(options)
     return item
 
+
 def euclidean_items(euclid: Item, options: dict):
     """Loops values from generated euclidean sequence"""
     euclid.evaluate(options)
     for item in euclid.evaluated_values:
         yield from resolve_item(item, options)
+
 
 def update_modifications(current: Item, options: dict) -> dict:
     """Update options based on current item"""
@@ -131,6 +159,7 @@ def update_modifications(current: Item, options: dict) -> dict:
             options[current.key] += current.value
         else:  # Create value if not existing
             options[current.key] = current.value
+
 
 def create_pitch(current: Item, options: dict) -> Pitch:
     """Create pitch based on values and options"""
@@ -249,6 +278,7 @@ class Sequence(Meta):
 @dataclass(kw_only=True)
 class PolyphonicSequence:
     """Class for polyphonic sequence"""
+
     values: list
 
 
@@ -357,9 +387,9 @@ class ListOperation(Sequence):
             """Vertical arpeggio operation, eg. (135)@(q 1 2 021)"""
             left = _filter_operation(left, options)
             right = _filter_operation(right, options)
-            if not isinstance(left,list):
+            if not isinstance(left, list):
                 left = list(left.evaluate_tree(options))
-            if not isinstance(right,list):
+            if not isinstance(right, list):
                 right = list(right.evaluate_tree(options))
             arp_items = []
 
