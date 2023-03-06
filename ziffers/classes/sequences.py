@@ -334,6 +334,7 @@ class Subdivision(Sequence):
             if isinstance(item, Event):
                 if duration is not None:
                     item.duration = new_d
+                    item.beat = new_d*4
                 yield item
 
 

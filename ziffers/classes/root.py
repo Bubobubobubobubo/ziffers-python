@@ -125,6 +125,14 @@ class Ziffers(Sequence):
             for val in self.evaluated_values
             if isinstance(val, Event)
         ]
+    
+    def total_duration(self) -> float:
+        """Return total duration"""
+        return sum([val.duration for val in self.evaluated_values if isinstance(val, Event)])
+
+    def total_beats(self) -> float:
+        """Return total beats"""
+        return sum(self.beats())
 
     def beats(self) -> list[float]:
         """Return list of pitch durations as floats"""
