@@ -46,9 +46,10 @@ class Meta:
                 elif getattr(self, key) is None:
                     local_value = self.local_options.get(key, False)
                     if local_value:
-                        setattr(self, key, local_value)
-                    else:
-                        setattr(self, key, value)
+                        value = local_value
+                    setattr(self, key, value)
+                    if key == "duration":
+                        setattr(self, "beat", value * 4)
 
     def dict(self):
         """Returns safe dict from the dataclass"""
@@ -132,10 +133,15 @@ class Event(Item):
     """Abstract class for events with duration"""
 
     duration: float = field(default=None)
+    beat: float = field(default=None)
 
     def get_duration(self):
         """Getter for duration"""
         return self.duration
+
+    def get_beat(self):
+        """Getter for beat"""
+        return self.beat
 
 
 @dataclass
@@ -171,7 +177,6 @@ class Pitch(Event):
     key: str = field(default=None)
     scale: str | list = field(default=None)
     freq: float = field(default=None)
-    beat: float = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -197,10 +202,6 @@ class Pitch(Event):
     def get_octave(self):
         """Getter for octave"""
         return self.octave
-
-    def get_beat(self):
-        """Getter for beat"""
-        return self.beat
 
     def get_pitch_class(self):
         """Getter for pitche"""
