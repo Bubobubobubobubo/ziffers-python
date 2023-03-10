@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 # pylint: disable=locally-disabled, no-name-in-module
 import re
-from math import floor
+from math import log2, floor
 from .common import repeat_text
 from .defaults import (
     SCALES,
@@ -138,8 +138,7 @@ def get_scale_length(name: str) -> int:
 def note_from_pc(
     root: int | str,
     pitch_class: int,
-    intervals: str | list[int | float],
-    cents: bool = False,
+    intervals: str | tuple[int | float],
     octave: int = 0,
     modifier: int = 0,
 ) -> int:
@@ -160,12 +159,11 @@ def note_from_pc(
     # Initialization
     root = note_name_to_midi(root) if isinstance(root, str) else root
     intervals = get_scale(intervals) if isinstance(intervals, str) else intervals
-    intervals = list(map(lambda x: x / 100), intervals) if cents else intervals
     scale_length = len(intervals)
 
     # Resolve pitch classes to the scale and calculate octave
     if pitch_class >= scale_length or pitch_class < 0:
-        octave += floor(pitch_class / scale_length)
+        octave += pitch_class // scale_length
         pitch_class = (
             scale_length - (abs(pitch_class) % scale_length)
             if pitch_class < 0
@@ -177,7 +175,9 @@ def note_from_pc(
     # Computing the result
     note = root + sum(intervals[0:pitch_class])
 
-    return note + (octave * sum(intervals)) + modifier
+    note = note + (octave * sum(intervals)) + modifier
+
+    return resolve_pitch_bend(note) 
 
 
 def parse_roman(numeral: str) -> int:
@@ -254,7 +254,7 @@ def midi_to_octave(note: int) -> int:
     Returns:
         int: Returns default octave in Ziffers where C4 is in octave 0
     """
-    return 0 if note <= 0 else floor(note / 12)
+    return 0 if note <= 0 else note // 12
 
 
 def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
@@ -345,3 +345,34 @@ def named_chord_from_degree(
         for interval in intervals:
             notes.append(scale_degree + interval + (cur_oct * 12))
     return notes
+
+def resolve_pitch_bend(note_value: float, semitones: int=1) -> int:
+    """Resolves pitch bend value from float midi note
+
+    Args:
+        note_value (float): Note value as float, eg. 60.41123
+        semitones (int, optional): Number of semitones to scale the pitch bend. Defaults to 1.
+
+    Returns:
+        int: Returns pitch bend value ranging from 0 to 16383. 8192 means no bend.
+    """
+    # TODO: None or 8192
+    midi_bend_value = None
+    if isinstance(note_value, float) and note_value % 1 != 0.0:
+        start_value = note_value if note_value > round(note_value) else round(note_value)
+        end_value = round(note_value) if note_value > round(note_value) else note_value
+        bend_diff = midi_to_freq(start_value) / midi_to_freq(end_value)
+        bend_target = 1200 * log2(bend_diff)
+        # https://www.cs.cmu.edu/~rbd/doc/cmt/part7.html
+        midi_bend_value = 8192 + int(8191 * (bend_target/(100*semitones)))
+    return (note_value, midi_bend_value)
+
+
+def cents_to_semitones(cents):
+    if cents[0] != 0.0:
+        cents = [0.0]+cents
+    semitone_scale = []
+    for i, cent in enumerate(cents[:-1]):
+        semitone_interval = (cents[i+1] - cent) / 100
+        semitone_scale.append(semitone_interval)
+    return tuple(semitone_scale)

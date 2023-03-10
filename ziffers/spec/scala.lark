@@ -1,0 +1,18 @@
+?root: lines
+
+lines: (number | operation)+
+random: "(" SIGNED_NUMBER "," SIGNED_NUMBER ")"
+operation: number (operator (number | sub_operations | operation))+
+!operator: "+" | "-" | "*" | "%" | "&" | "|" | "<<" | ">>" | "/"
+sub_operations: "(" operation ")"
+number: SIGNED_NUMBER | random
+
+%import common.SIGNED_NUMBER
+%import common.FLOAT
+%import common.INT
+%import common.WORD
+%import common.CNAME
+%import common.WS
+%import common.NEWLINE
+
+%ignore WS

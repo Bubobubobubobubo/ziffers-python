@@ -47,5 +47,5 @@ def test_notenames(name: str, expected: int):
 )
 def test_note_to_midi(pitch_classes: str, expected: int):
     assert [
-        scale.note_from_pc(root=60, pitch_class=val, intervals="Ionian") for val in pitch_classes
+        scale.note_from_pc(root=60, pitch_class=val, intervals="Ionian")[0] for val in pitch_classes
     ] == expected

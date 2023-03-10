@@ -3,20 +3,42 @@ from pathlib import Path
 from functools import lru_cache
 from lark import Lark
 from .classes.root import Ziffers
-from .mapper import ZiffersTransformer
+from .mapper import ZiffersTransformer, ScalaTransformer
 
 
 grammar_path = Path(__file__).parent
 grammar_folder = Path.joinpath(grammar_path, "spec")
-grammar_file = Path.joinpath(grammar_folder, "ziffers.lark")
+ziffers_grammar = Path.joinpath(grammar_folder, "ziffers.lark")
+scala_grammar = Path.joinpath(grammar_folder, "scala.lark")
 
 ziffers_parser = Lark.open(
-    str(grammar_file),
+    str(ziffers_grammar),
     rel_to=__file__,
     start="root",
     parser="lalr",
     transformer=ZiffersTransformer(),
 )
+
+scala_parser = Lark.open(
+    str(scala_grammar),
+    rel_to=__file__,
+    start="root",
+    parser="lalr",
+    transformer=ScalaTransformer(),
+)
+
+def parse_scala(expr: str):
+    """Parse an expression using the Ziffers parser
+
+    Args:
+        expr (str): Ziffers expression as a string
+
+    Returns:
+        Ziffers: Reutrns Ziffers iterable
+    """
+    # Ignore everything before last comment "!"
+    values = expr.split("!")[-1]
+    return scala_parser.parse(values)
 
 
 def parse_expression(expr: str) -> Ziffers:

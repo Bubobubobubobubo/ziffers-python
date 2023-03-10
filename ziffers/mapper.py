@@ -1,5 +1,8 @@
 """ Lark transformer for mapping Lark tokens to Ziffers objects """
+import random
+from math import log
 from lark import Transformer, Token
+from .scale import cents_to_semitones
 from .classes.root import Ziffers
 from .classes.sequences import (
     Sequence,
@@ -337,15 +340,17 @@ class ZiffersTransformer(Transformer):
         return items[0].value
 
     def variable(self, items):
-        if len(items)>1:
+        if len(items) > 1:
             prefixes = sum_dict(items[0:-1])
             text_prefix = prefixes.pop("text")
-            return Variable(name=items[-1], text=text_prefix+items[-1], local_options=prefixes)
+            return Variable(
+                name=items[-1], text=text_prefix + items[-1], local_options=prefixes
+            )
         return Variable(name=items[0], text=items[0])
-    
+
     def variable_char(self, items):
         """Return parsed variable name"""
-        return items[0].value #Variable(name=items[0].value, text=items[0].value)
+        return items[0].value  # Variable(name=items[0].value, text=items[0].value)
 
     def variablelist(self, items):
         """Return list of variables"""
@@ -474,3 +479,41 @@ class ZiffersTransformer(Transformer):
             wrap_start="",
             wrap_end=":" + items[1].text,
         )
+
+
+# pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
+class ScalaTransformer(Transformer):
+    def lines(self, items):
+        return cents_to_semitones(items)
+    
+    def operation(self, items):
+        val = eval("".join(str(item) for item in items))
+        return 1200.0 * log(float(val), 2)
+    
+    def operator(self, items):
+        return items[0].value
+
+    def sub_operations(self, items):
+        return "(" + items[0] + ")"
+
+    def number(self, items):
+        val = items[0]
+        return float(val.value)
+
+    def random(self, items):
+        def _parse_type(val):
+            if "." in val:
+                return float(val)
+            else:
+                return int(val)
+
+        def _rand_between(start, end):
+            if isinstance(start, float) or isinstance(end, float):
+                return random.uniform(min(start, end), max(start, end))
+            elif isinstance(start, int) and isinstance(end, int):
+                return random.randint(min(start, end), max(start, end))
+
+        start = _parse_type(items[0].value)
+        end = _parse_type(items[1].value)
+        rand_val = _rand_between(start, end)
+        return 1200.0 * log(float(rand_val), 2)

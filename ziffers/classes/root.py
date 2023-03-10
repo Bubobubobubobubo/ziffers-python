@@ -109,6 +109,14 @@ class Ziffers(Sequence):
             for val in self.evaluated_values
             if isinstance(val, (Pitch, Chord))
         ]
+    
+    def pitch_bends(self) -> list[int]:
+        """Return list of pitch bend values"""
+        return [
+            val.get_pitch_bend()
+            for val in self.evaluated_values
+            if isinstance(val, (Pitch, Chord))
+        ]
 
     def notes(self) -> list[int]:
         """Return list of midi notes"""

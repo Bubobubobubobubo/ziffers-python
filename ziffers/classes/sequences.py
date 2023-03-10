@@ -1,6 +1,7 @@
 """ Sequence classes for Ziffers """
 from dataclasses import dataclass, field, replace
 from itertools import product
+from math import floor
 from types import LambdaType
 from copy import deepcopy
 from ..defaults import DEFAULT_OPTIONS
@@ -190,7 +191,7 @@ def create_pitch(current: Item, options: dict) -> Pitch:
 
     current_value = current.get_value(merged_options)
 
-    note = note_from_pc(
+    note, pitch_bend = note_from_pc(
         root=merged_options["key"],
         pitch_class=current_value,
         intervals=merged_options["scale"],
@@ -200,8 +201,9 @@ def create_pitch(current: Item, options: dict) -> Pitch:
     new_pitch = Pitch(
         pitch_class=current_value,
         text=str(current_value),
-        note=note,
         freq=midi_to_freq(note),
+        note=floor(note),
+        pitch_bend=pitch_bend,
         octave=c_octave,
         modifier=c_modifier,
         kwargs=merged_options,

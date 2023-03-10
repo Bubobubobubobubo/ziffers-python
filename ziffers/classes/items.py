@@ -1,5 +1,6 @@
 """ Ziffers item classes """
 from dataclasses import dataclass, field, asdict
+from math import floor
 import operator
 import random
 from ..scale import (
@@ -171,6 +172,7 @@ class Pitch(Event):
     """Class for pitch in time"""
 
     pitch_class: int
+    pitch_bend: float = field(default=None)
     octave: int = field(default=None)
     modifier: int = field(default=None)
     note: int = field(default=None)
@@ -206,6 +208,10 @@ class Pitch(Event):
     def get_pitch_class(self):
         """Getter for pitche"""
         return self.pitch_class
+    
+    def get_pitch_bend(self):
+        """Getter for pitche"""
+        return self.pitch_bend
 
     def update_note(self, force: bool = False):
         """Update note if Key, Scale and Pitch-class are present"""
@@ -215,15 +221,16 @@ class Pitch(Event):
             and (self.pitch_class is not None)
             and (self.note is None or force)
         ):
-            note = note_from_pc(
+            note, pitch_bend = note_from_pc(
                 root=self.key,
                 pitch_class=self.pitch_class,
                 intervals=self.scale,
                 modifier=self.modifier if self.modifier is not None else 0,
                 octave=self.octave if self.octave is not None else 0,
             )
+            self.pitch_bend = pitch_bend
             self.freq = midi_to_freq(note)
-            self.note = note
+            self.note = floor(note)
         if self.duration is not None:
             self.beat = self.duration * 4
 
@@ -296,6 +303,7 @@ class Chord(Event):
     notes: list[int] = field(default=None)
     inversions: int = field(default=None)
     pitches: list[int] = field(default=None, init=False)
+    pitch_bends: list[int] = field(default=None, init=False)
     freqs: list[float] = field(default=None, init=False)
     octaves: list[int] = field(default=None, init=False)
     durations: list[float] = field(default=None, init=False)
@@ -333,6 +341,10 @@ class Chord(Event):
     def get_pitch_class(self):
         """Getter for  pitches"""
         return self.pitches
+    
+    def get_pitch_bend(self):
+        """Getter for pitche"""
+        return self.pitch_bends
 
     def get_duration(self):
         """Getter for  durations"""
@@ -353,7 +365,7 @@ class Chord(Event):
 
     def update_notes(self, options=None):
         """Update notes"""
-        pitches, notes, freqs, octaves, durations, beats = ([] for _ in range(6))
+        pitches, pitch_bends, notes, freqs, octaves, durations, beats = ([] for _ in range(7))
 
         # Update notes
         for pitch in self.pitch_classes:
@@ -367,6 +379,7 @@ class Chord(Event):
         # Create helper lists
         for pitch in self.pitch_classes:
             pitches.append(pitch.pitch_class)
+            pitch_bends.append(pitch.pitch_bend)
             notes.append(pitch.note)
             freqs.append(pitch.freq)
             octaves.append(pitch.octave)
@@ -374,6 +387,7 @@ class Chord(Event):
             beats.append(pitch.beat)
 
         self.pitches = pitches
+        self.pitch_bends = pitch_bends
         self.notes = notes
         self.freqs = freqs
         self.octaves = octaves
