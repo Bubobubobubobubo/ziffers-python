@@ -31,6 +31,7 @@ from .items import (
     Modification,
     Whitespace,
     Sample,
+    SampleList
 )
 
 
@@ -78,10 +79,12 @@ def resolve_item(item: Meta, options: dict):
                 yield from resolve_item(variable, options)
     elif isinstance(item, VariableList):
         seqlist = []
+        sample_list = True
         for var in item.values:
             if var.name in options:
                 opt_item = options[var.name]
                 if isinstance(opt_item, LambdaType):
+                    sample_list = False
                     seqlist.append(
                         Function(
                             run=opt_item,
@@ -100,9 +103,13 @@ def resolve_item(item: Meta, options: dict):
                         )
                     )
                 elif isinstance(opt_item, Sequence):
+                    sample_list = False
                     seqlist.append(opt_item)
         if len(seqlist) > 0:
-            yield PolyphonicSequence(values=seqlist)
+            if sample_list:
+                yield SampleList(values=seqlist)
+            else:
+                yield PolyphonicSequence(values=seqlist)
     elif isinstance(item, Range):
         yield from item.evaluate(options)
     elif isinstance(item, Cyclic):
