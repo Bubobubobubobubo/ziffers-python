@@ -501,7 +501,7 @@ class Sample(Event):
     name: str
 
 @dataclass(kw_only=True)
-class SampleList(Item):
+class SampleList(Event):
     """Class for using multiple samples"""
 
     values: list

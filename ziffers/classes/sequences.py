@@ -107,7 +107,7 @@ def resolve_item(item: Meta, options: dict):
                     seqlist.append(opt_item)
         if len(seqlist) > 0:
             if sample_list:
-                yield SampleList(values=seqlist)
+                yield SampleList(values=seqlist, kwargs=options)
             else:
                 yield PolyphonicSequence(values=seqlist)
     elif isinstance(item, Range):
