@@ -1,11 +1,11 @@
 ?root: lines
 
-lines: (number | operation | ratio | edo_ratio)+
+lines: (number | operation | ratio | edo_ratio | edji_ratio)+
 
 operation: number (operator (number | sub_operations | operation))+
 ratio: (int | random_int) "/" (int | random_int)
 edo_ratio: (int | random_int) "\\" (int | random_int)
-edji_ratio: (int | random_int) "\\" (int | random_int) "<" int "/" int ">"
+edji_ratio: (int | random_int) "\\" (int | random_int) "<" (int | random_int) "/"? (int | random_int)? ">"
 !operator: "+" | "-" | "*" | "%" | "&" | "|" | "<<" | ">>"
 sub_operations: "(" operation ")"
 
