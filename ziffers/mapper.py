@@ -481,13 +481,14 @@ class ZiffersTransformer(Transformer):
         )
 
 
-# pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name
+# pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name, eval-used
 class ScalaTransformer(Transformer):
     def lines(self, items):
         cents = [ratio_to_cents(item) if isinstance(item,int) else item for item in items]
         return cents_to_semitones(cents)
 
     def operation(self, items):
+        # Safe eval. Items are pre-parsed.
         val = eval("".join(str(item) for item in items))
         return val
 

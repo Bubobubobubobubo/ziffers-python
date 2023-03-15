@@ -2,7 +2,7 @@
 
 lines: (number | operation | ratio | edo_ratio | edji_ratio)+
 
-operation: number (operator (number | sub_operations | operation))+
+operation: (number | ratio) (operator ((number | ratio) | sub_operations | operation))+
 ratio: (int | random_int) "/" (int | random_int)
 edo_ratio: (int | random_int) "\\" (int | random_int)
 edji_ratio: (int | random_int) "\\" (int | random_int) "<" (int | random_int) "/"? (int | random_int)? ">"
