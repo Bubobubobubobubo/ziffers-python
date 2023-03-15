@@ -63,6 +63,12 @@ def zparse(expr: str, **opts) -> Ziffers:
     Returns:
         Ziffers: Returns Ziffers iterable parsed with the given options
     """
+    if "scale" in opts:
+        scale = opts["scale"]
+        if isinstance(scale,str) and not scale.isalpha():
+            parsed_scale = parse_scala(scale)
+            opts["scale"] = parsed_scale
+
     parsed = parse_expression(expr)
     parsed.init_opts(opts)
     return parsed
