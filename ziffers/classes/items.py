@@ -172,7 +172,7 @@ class Pitch(Event):
     """Class for pitch in time"""
 
     pitch_class: int
-    pitch_bend: float = field(default=None)
+    pitch_bend: int = field(default=None)
     octave: int = field(default=None)
     modifier: int = field(default=None)
     note: int = field(default=None)

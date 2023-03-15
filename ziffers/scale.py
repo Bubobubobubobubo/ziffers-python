@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 # pylint: disable=locally-disabled, no-name-in-module
 import re
-from math import log2, floor
+from math import log2, floor, log
 from .common import repeat_text
 from .defaults import (
     SCALES,
@@ -177,7 +177,10 @@ def note_from_pc(
 
     note = note + (octave * sum(intervals)) + modifier
 
-    return resolve_pitch_bend(note) 
+    if isinstance(note, float):
+        return resolve_pitch_bend(note)
+
+    return (note, None)
 
 
 def parse_roman(numeral: str) -> int:
@@ -286,14 +289,14 @@ def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
     if len(npc) > 1:
         modifier = 1 if (npc[0] == "#") else -1
         return {
-            "text": repeat_text("^", "_", octave)+npc,
+            "text": repeat_text("^", "_", octave) + npc,
             "pitch_class": int(npc[1]),
             "octave": octave,
             "modifier": modifier,
         }
 
     return {
-        "text": repeat_text("^", "_", octave)+npc,
+        "text": repeat_text("^", "_", octave) + npc,
         "pitch_class": int(npc),
         "octave": octave,
     }
@@ -326,7 +329,11 @@ def chord_from_degree(
 
 
 def named_chord_from_degree(
-    degree: int, name: str = "major", root: int = 60, scale: str="Major", num_octaves: int = 1
+    degree: int,
+    name: str = "major",
+    root: int = 60,
+    scale: str = "Major",
+    num_octaves: int = 1,
 ) -> list[int]:
     """Generates chord from given roman numeral and chord name
 
@@ -339,14 +346,15 @@ def named_chord_from_degree(
         list[int]: _description_
     """
     intervals = CHORDS.get(name, CHORDS["major"])
-    scale_degree = get_scale_notes(scale, root)[degree-1]
+    scale_degree = get_scale_notes(scale, root)[degree - 1]
     notes = []
     for cur_oct in range(num_octaves):
         for interval in intervals:
             notes.append(scale_degree + interval + (cur_oct * 12))
     return notes
 
-def resolve_pitch_bend(note_value: float, semitones: int=1) -> int:
+
+def resolve_pitch_bend(note_value: float, semitones: int = 1) -> int:
     """Resolves pitch bend value from float midi note
 
     Args:
@@ -356,23 +364,29 @@ def resolve_pitch_bend(note_value: float, semitones: int=1) -> int:
     Returns:
         int: Returns pitch bend value ranging from 0 to 16383. 8192 means no bend.
     """
-    # TODO: None or 8192
-    midi_bend_value = None
+    midi_bend_value = 8192
     if isinstance(note_value, float) and note_value % 1 != 0.0:
-        start_value = note_value if note_value > round(note_value) else round(note_value)
+        start_value = (
+            note_value if note_value > round(note_value) else round(note_value)
+        )
         end_value = round(note_value) if note_value > round(note_value) else note_value
         bend_diff = midi_to_freq(start_value) / midi_to_freq(end_value)
         bend_target = 1200 * log2(bend_diff)
         # https://www.cs.cmu.edu/~rbd/doc/cmt/part7.html
-        midi_bend_value = 8192 + int(8191 * (bend_target/(100*semitones)))
+        midi_bend_value = 8192 + int(8191 * (bend_target / (100 * semitones)))
     return (note_value, midi_bend_value)
 
 
-def cents_to_semitones(cents):
+def cents_to_semitones(cents: list) -> tuple[float]:
+    """Tranform cents to semitones"""
     if cents[0] != 0.0:
-        cents = [0.0]+cents
+        cents = [0.0] + cents
     semitone_scale = []
     for i, cent in enumerate(cents[:-1]):
-        semitone_interval = (cents[i+1] - cent) / 100
+        semitone_interval = (cents[i + 1] - cent) / 100
         semitone_scale.append(semitone_interval)
     return tuple(semitone_scale)
+
+def ratio_to_cents(ratio: float) -> float:
+    """Transform ratio to cents"""
+    return 1200.0 * log(float(ratio), 2)

@@ -1,18 +1,20 @@
 ?root: lines
 
-lines: (number | operation)+
-random: "(" SIGNED_NUMBER "," SIGNED_NUMBER ")"
+lines: (number | operation | ratio | edo_ratio)+
+
 operation: number (operator (number | sub_operations | operation))+
-!operator: "+" | "-" | "*" | "%" | "&" | "|" | "<<" | ">>" | "/"
+ratio: (int | random_int) "/" (int | random_int)
+edo_ratio: (int | random_int) "\\" (int | random_int)
+edji_ratio: (int | random_int) "\\" (int | random_int) "<" int "/" int ">"
+!operator: "+" | "-" | "*" | "%" | "&" | "|" | "<<" | ">>"
 sub_operations: "(" operation ")"
-number: SIGNED_NUMBER | random
 
-%import common.SIGNED_NUMBER
-%import common.FLOAT
-%import common.INT
-%import common.WORD
-%import common.CNAME
+// Signed number without EXP
+?number: float | int | random_int | random_float
+random_int: "(" int "," int ")"
+random_float: "(" float "," float ")"
+float: /(-?[0-9]+\.[0-9]*)|(\.[0-9]+)/
+int: /[0-9]+/
+
 %import common.WS
-%import common.NEWLINE
-
 %ignore WS
