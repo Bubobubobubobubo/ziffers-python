@@ -1,20 +1,24 @@
 ?root: lines
 
-lines: (number | operation | ratio | edo_ratio | edji_ratio)+
+lines: (number | ratio | monzo | operation)+
 
-operation: (number | ratio) (operator ((number | ratio) | sub_operations | operation))+
-ratio: (int | random_int) "/" (int | random_int)
-edo_ratio: (int | random_int) "\\" (int | random_int)
-edji_ratio: (int | random_int) "\\" (int | random_int) "<" (int | random_int) "/"? (int | random_int)? ">"
-!operator: "+" | "-" | "*" | "%" | "&" | "|" | "<<" | ">>"
-sub_operations: "(" operation ")"
-
-// Signed number without EXP
 ?number: float | int | random_int | random_float
 random_int: "(" int "," int ")"
 random_float: "(" float "," float ")"
 float: /(-?[0-9]+\.[0-9]*)|(\.[0-9]+)/
-int: /[0-9]+/
+int: /-?[0-9]+/
+
+?ratio: frac_ratio | edo_ratio | edji_ratio | decimal_ratio
+frac_ratio: (int | random_int) "/" (int | random_int)
+edo_ratio: (int | random_int) "\\" (int | random_int)
+edji_ratio: (int | random_int) "\\" (int | random_int) "<" (int | random_int) "/"? (int | random_int)? ">"
+decimal_ratio: int "," int
+
+monzo: "[" int+ ">"
+
+operation: (number | ratio | monzo) (operator ((number | ratio | monzo) | sub_operations | operation))+
+!operator: "+" | "-" | "*" | "%" | "&" | "|" | "<<" | ">>"
+sub_operations: "(" operation ")"
 
 %import common.WS
 %ignore WS

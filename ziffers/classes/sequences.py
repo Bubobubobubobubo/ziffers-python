@@ -4,8 +4,9 @@ from itertools import product
 from math import floor
 from types import LambdaType
 from copy import deepcopy
+import operator
 from ..defaults import DEFAULT_OPTIONS
-from ..common import cyclic_zip, euclidian_rhythm
+from ..common import cyclic_zip, euclidian_rhythm, flatten
 from ..scale import note_from_pc, midi_to_freq
 from .items import (
     Meta,
@@ -31,7 +32,7 @@ from .items import (
     Modification,
     Whitespace,
     Sample,
-    SampleList
+    SampleList,
 )
 
 
@@ -46,6 +47,8 @@ def resolve_item(item: Meta, options: dict):
         elif isinstance(item, Subdivision):
             item.evaluate_values(options)
             yield item
+        elif isinstance(item, Eval):
+            yield from item.evaluate_values(options)
         else:
             yield from item.evaluate_tree(options)
     elif isinstance(item, VariableAssignment):
@@ -66,14 +69,14 @@ def resolve_item(item: Meta, options: dict):
                         run=opt_item,
                         text=item.text,
                         kwargs=(options | item.local_options),
-                        local_options=item.local_options
+                        local_options=item.local_options,
                     )
                 elif isinstance(opt_item, str):
                     yield Sample(
                         name=opt_item,
                         text=item.text,
                         kwargs=(options | item.local_options),
-                        local_options=item.local_options
+                        local_options=item.local_options,
                     )
                 variable = deepcopy(opt_item)
                 yield from resolve_item(variable, options)
@@ -90,7 +93,7 @@ def resolve_item(item: Meta, options: dict):
                             run=opt_item,
                             text=var.text,
                             kwargs=(options | var.local_options),
-                            local_options=var.local_options
+                            local_options=var.local_options,
                         )
                     )
                 elif isinstance(opt_item, str):
@@ -99,7 +102,7 @@ def resolve_item(item: Meta, options: dict):
                             name=opt_item,
                             text=var.text,
                             kwargs=(options | var.local_options),
-                            local_options=var.local_options
+                            local_options=var.local_options,
                         )
                     )
                 elif isinstance(opt_item, Sequence):
@@ -343,7 +346,7 @@ class Subdivision(Sequence):
             if isinstance(item, Event):
                 if duration is not None:
                     item.duration = new_d
-                    item.beat = new_d*4
+                    item.beat = new_d * 4
                 yield item
 
 
@@ -373,6 +376,8 @@ class ListOperation(Sequence):
                         flattened_list.extend(list(item.evaluate_durations()))
                     elif isinstance(item, RepeatedListSequence):
                         flattened_list.extend(list(item.resolve_repeat(options)))
+                    elif isinstance(item, Eval):
+                        flattened_list.extend(item.evaluate_values(options))
                     else:
                         flattened_list.append(_filter_operation(item, options))
                 elif isinstance(item, Cyclic):
@@ -543,13 +548,43 @@ class ListOperation(Sequence):
 class Eval(Sequence):
     """Class for evaluation notation"""
 
-    result: ... = None
     wrap_start: str = field(default="{", repr=False)
     wrap_end: str = field(default="}", repr=False)
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.result = eval(self.text)
+    # def __post_init__(self):
+    #    self.text = "".join([val.text for val in flatten(self.values)])
+    #   super().__post_init__()
+
+    def evaluate_values(self, options):
+        operations = [val for val in self.values if isinstance(val, (Operation, Rest))]
+        eval_values = []
+        for val in operations:
+            if isinstance(val,Operation):
+                eval_values.append(Pitch(pitch_class=val.evaluate(), kwargs=options | val.local_options))
+            else:
+                eval_values.append(val)
+
+        self.evaluated_values = eval_values
+
+        return self.evaluated_values
+
+
+@dataclass(kw_only=True)
+class LispOperation(Sequence):
+    """Class for lisp-like operations: (+ 1 2 3) etc."""
+
+    values: list
+    operator: operator
+
+
+@dataclass(kw_only=True)
+class Operation(Sequence):
+    """Class for sequential operations"""
+
+    values: list
+
+    def evaluate(self):
+        return eval(self.text)
 
 
 @dataclass(kw_only=True)
@@ -588,6 +623,8 @@ class RepeatedSequence(Sequence):
                 elif isinstance(item, Subdivision):
                     item.evaluate_values(options)
                     yield item
+                elif isinstance(item, Eval):
+                    yield from item.evaluate_values(options)
                 else:
                     yield from item
             elif isinstance(item, Cyclic):

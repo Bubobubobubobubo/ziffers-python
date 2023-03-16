@@ -2,6 +2,7 @@
 import re
 from copy import deepcopy
 
+
 def flatten(arr: list) -> list:
     """Flattens array"""
     return (
@@ -23,13 +24,15 @@ def rotate(arr, k):
         arr = arr[-k:] + arr[:-k]
     return arr
 
-def repeat_text(pos,neg,times):
+
+def repeat_text(pos, neg, times):
     """Helper to repeat text"""
-    if times>0:
-        return pos*times
-    if times<0:
-        return neg*abs(times)
+    if times > 0:
+        return pos * times
+    if times < 0:
+        return neg * abs(times)
     return ""
+
 
 def sum_dict(arr: list[dict]) -> dict:
     """Sums a list of dicts: [{a:3,b:3},{b:1}] -> {a:3,b:4}"""

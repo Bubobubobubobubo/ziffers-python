@@ -1,8 +1,7 @@
 """ Lark transformer for mapping Lark tokens to Ziffers objects """
 import random
-from math import log, pow
 from lark import Transformer, Token
-from .scale import cents_to_semitones, ratio_to_cents
+from .scale import cents_to_semitones, ratio_to_cents, monzo_to_cents
 from .classes.root import Ziffers
 from .classes.sequences import (
     Sequence,
@@ -13,6 +12,8 @@ from .classes.sequences import (
     Euclid,
     Subdivision,
     Eval,
+    Operation,
+    LispOperation,
 )
 from .classes.items import (
     Whitespace,
@@ -29,7 +30,6 @@ from .classes.items import (
     RandomInteger,
     Range,
     Operator,
-    Operation,
     Atom,
     Integer,
     VariableAssignment,
@@ -137,6 +137,11 @@ class ZiffersTransformer(Transformer):
         """Return pitch class info"""
         text_value = items[0].value.replace("T", "10").replace("E", "11")
         return {"pitch_class": int(text_value), "text": items[0].value}
+
+    def escaped_pitch(self, items):
+        """Return escaped pitch"""
+        val = items[0].value[1:-1]
+        return {"pitch_class": int(val), "text": val}
 
     def prefix(self, items):
         """Return prefix"""
@@ -305,8 +310,7 @@ class ZiffersTransformer(Transformer):
 
     def eval(self, items):
         """Parse eval"""
-        val = items[0]
-        return Eval(values=val)
+        return Eval(values=items)
 
     def sub_operations(self, items):
         """Returns list of operations"""
@@ -314,12 +318,16 @@ class ZiffersTransformer(Transformer):
 
     def operation(self, items):
         """Return partial eval operations"""
-        return flatten(items)
+        if isinstance(items[0], dict):
+            local_opts = items[0]
+            del local_opts["text"]
+            return Operation(values=flatten(items[1:]), local_options=items[0])
+        return Operation(values=flatten(items))
 
     def atom(self, token):
         """Return partial eval item"""
         val = token[0].value
-        return Atom(value=val, text=val)
+        return Atom(value=val, text=str(val))
 
     # Variable assignment
 
@@ -340,6 +348,7 @@ class ZiffersTransformer(Transformer):
         return items[0].value
 
     def variable(self, items):
+        """Return variable"""
         if len(items) > 1:
             prefixes = sum_dict(items[0:-1])
             text_prefix = prefixes.pop("text")
@@ -405,9 +414,10 @@ class ZiffersTransformer(Transformer):
                 )
             return seq
 
-    def NUMBER(self, token):
-        """Parse integer"""
-        val = token.value
+    def integer(self, items):
+        """Parses integer from single ints"""
+        concatted = sum_dict(items)
+        val = concatted["text"]
         return Integer(text=val, value=int(val))
 
     def number(self, item):
@@ -422,7 +432,7 @@ class ZiffersTransformer(Transformer):
         """Parse lisp like list operation"""
         op = items[0]
         values = items[1:]
-        return Operation(
+        return LispOperation(
             operator=op,
             values=values,
             text="(+" + "".join([v.text for v in values]) + ")",
@@ -430,6 +440,11 @@ class ZiffersTransformer(Transformer):
 
     def operator(self, token):
         """Parse operator"""
+        val = token[0].value
+        return Operator(text=val, value=OPERATORS[val])
+
+    def list_operator(self, token):
+        """Parse list operator"""
         val = token[0].value
         return Operator(text=val, value=OPERATORS[val])
 
@@ -483,44 +498,67 @@ class ZiffersTransformer(Transformer):
 
 # pylint: disable=locally-disabled, unused-argument, too-many-public-methods, invalid-name, eval-used
 class ScalaTransformer(Transformer):
+    """Transformer for scala scales"""
+
     def lines(self, items):
-        cents = [ratio_to_cents(item) if isinstance(item,int) else item for item in items]
+        """Transforms cents to semitones"""
+        cents = [
+            ratio_to_cents(item) if isinstance(item, int) else item for item in items
+        ]
         return cents_to_semitones(cents)
 
     def operation(self, items):
+        """Get operation"""
         # Safe eval. Items are pre-parsed.
         val = eval("".join(str(item) for item in items))
         return val
 
     def operator(self, items):
+        """Get operator"""
         return items[0].value
 
     def sub_operations(self, items):
+        """Get sub-operation"""
         return "(" + items[0] + ")"
 
-    def ratio(self, items):
-        ratio = items[0]/items[1]
+    def frac_ratio(self, items):
+        """Get ration as fraction"""
+        ratio = items[0] / items[1]
         return ratio_to_cents(ratio)
-    
+
+    def decimal_ratio(self, items):
+        """Get ratio as decimal"""
+        ratio = float(str(items[0]) + "." + str(items[1]))
+        return ratio_to_cents(ratio)
+
+    def monzo(self, items):
+        """Get monzo ratio"""
+        return monzo_to_cents(items)
+
     def edo_ratio(self, items):
-        ratio = pow(2,items[0]/items[1])
+        """Get EDO ratio"""
+        ratio = pow(2, items[0] / items[1])
         return ratio_to_cents(ratio)
-    
+
     def edji_ratio(self, items):
-        if len(items)>3:
-            power = items[2]/items[3]
+        """Get EDJI ratio"""
+        if len(items) > 3:
+            power = items[2] / items[3]
         else:
             power = items[2]
-        ratio = pow(power,items[0]/items[1])
+        ratio = pow(power, items[0] / items[1])
         return ratio_to_cents(ratio)
-    
+
     def int(self, items):
+        """Get integer"""
         return int(items[0].value)
-    
+
     def float(self, items):
+        """Get float"""
         return float(items[0].value)
-        
+
     def random_int(self, items):
+        """Get random integer"""
 
         def _rand_between(start, end):
             return random.randint(min(start, end), max(start, end))
@@ -529,8 +567,9 @@ class ScalaTransformer(Transformer):
         end = items[1]
         rand_val = _rand_between(start, end)
         return rand_val
-    
+
     def random_decimal(self, items):
+        """Get random decimal"""
 
         def _rand_between(start, end):
             return random.uniform(min(start, end), max(start, end))

@@ -1,7 +1,6 @@
 """ Ziffers item classes """
 from dataclasses import dataclass, field, asdict
 from math import floor
-import operator
 import random
 from ..scale import (
     note_from_pc,
@@ -149,6 +148,26 @@ class Event(Item):
 class Rest(Event):
     """Class for rests"""
 
+    def get_note(self):
+        """Getter for note"""
+        return None
+
+    def get_freq(self):
+        """Getter for freq"""
+        return None
+
+    def get_octave(self):
+        """Getter for octave"""
+        return None
+
+    def get_pitch_class(self):
+        """Getter for pitche"""
+        return None
+    
+    def get_pitch_bend(self):
+        """Getter for pitche"""
+        return None
+
 
 @dataclass
 class Measure(Item):
@@ -283,9 +302,16 @@ class RandomPitch(Event):
         Returns:
             int: Returns random pitch
         """
-        return random.randint(
-            0, get_scale_length(options.get("scale", "Major")) if options else 9
-        )
+        if options:
+            scale = options["scale"]
+            if isinstance(scale, str):
+                scale_length = get_scale_length(options.get("scale", "Major"))
+            else:
+                scale_length = len(scale)
+        else:
+            scale_length = 9
+
+        return random.randint(0, scale_length)
 
 
 @dataclass(kw_only=True)
@@ -602,14 +628,6 @@ class Operator(Item):
     """Class for math operators"""
 
     value: ...
-
-
-@dataclass(kw_only=True)
-class Operation(Item):
-    """Class for lisp-like operations: (+ 1 2 3) etc."""
-
-    values: list
-    operator: operator
 
 
 @dataclass(kw_only=True)

@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from itertools import islice, cycle
 from ..defaults import DEFAULT_OPTIONS
-from .items import Item, Pitch, Chord, Event
+from .items import Item, Pitch, Chord, Event, Rest
 from .sequences import Sequence, Subdivision
 
 
@@ -32,7 +32,7 @@ class Ziffers(Sequence):
 
     def __len__(self):
         return len(self.evaluated_values)
-    
+
     def __iter__(self):
         return self
 
@@ -107,15 +107,15 @@ class Ziffers(Sequence):
         return [
             val.get_pitch_class()
             for val in self.evaluated_values
-            if isinstance(val, (Pitch, Chord))
+            if isinstance(val, (Pitch, Chord, Rest))
         ]
-    
+
     def pitch_bends(self) -> list[int]:
         """Return list of pitch bend values"""
         return [
             val.get_pitch_bend()
             for val in self.evaluated_values
-            if isinstance(val, (Pitch, Chord))
+            if isinstance(val, (Pitch, Chord, Rest))
         ]
 
     def notes(self) -> list[int]:
@@ -123,7 +123,7 @@ class Ziffers(Sequence):
         return [
             val.get_note()
             for val in self.evaluated_values
-            if isinstance(val, (Pitch, Chord))
+            if isinstance(val, (Pitch, Chord, Rest))
         ]
 
     def durations(self) -> list[float]:
@@ -133,10 +133,12 @@ class Ziffers(Sequence):
             for val in self.evaluated_values
             if isinstance(val, Event)
         ]
-    
+
     def total_duration(self) -> float:
         """Return total duration"""
-        return sum([val.duration for val in self.evaluated_values if isinstance(val, Event)])
+        return sum(
+            [val.duration for val in self.evaluated_values if isinstance(val, Event)]
+        )
 
     def total_beats(self) -> float:
         """Return total beats"""
@@ -161,7 +163,7 @@ class Ziffers(Sequence):
         return [
             val.get_octave()
             for val in self.evaluated_values
-            if isinstance(val, (Pitch, Chord))
+            if isinstance(val, (Pitch, Chord, Rest))
         ]
 
     def freqs(self) -> list[int]:
@@ -169,9 +171,9 @@ class Ziffers(Sequence):
         return [
             val.get_freq()
             for val in self.evaluated_values
-            if isinstance(val, (Pitch, Chord))
+            if isinstance(val, (Pitch, Chord, Rest))
         ]
-    
+
     def collect(self, num: int = None, keys: str | list = None) -> list:
         """Collect n items from parsed Ziffers"""
         if num is None:

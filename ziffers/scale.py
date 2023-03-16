@@ -2,7 +2,9 @@
 #!/usr/bin/env python3
 # pylint: disable=locally-disabled, no-name-in-module
 import re
-from math import log2, floor, log
+from math import log2
+from itertools import islice
+from .generators import gen_primes
 from .common import repeat_text
 from .defaults import (
     SCALES,
@@ -70,7 +72,7 @@ def note_name_to_midi(name: str) -> int:
     return 12 + octave * 12 + interval + modifier
 
 
-def get_scale(name: str) -> list[int]:
+def get_scale(scale: str) -> list[int]:
     """Get a scale from the global scale list
 
     Args:
@@ -79,7 +81,10 @@ def get_scale(name: str) -> list[int]:
     Returns:
         list: List of intervals in the scale
     """
-    scale = SCALES.get(name.lower().capitalize(), SCALES["Ionian"])
+    if isinstance(scale, (list, tuple)):
+        return scale
+
+    scale = SCALES.get(scale.lower().capitalize(), SCALES["Ionian"])
     return scale
 
 
@@ -102,7 +107,11 @@ def get_scale_notes(name: str, root: int = 60, num_octaves: int = 1) -> list[int
 
 
 def get_chord_from_scale(
-    degree: int, root: int = 60, scale: str = "Major", num_notes: int = 3, skip: int = 2
+    degree: int,
+    root: int = 60,
+    scale: str | tuple = "Major",
+    num_notes: int = 3,
+    skip: int = 2,
 ) -> list[int]:
     """Generate chord from the scale by skipping notes
 
@@ -116,12 +125,17 @@ def get_chord_from_scale(
     Returns:
         list[int]: List of midi notes
     """
-    num_of_octaves = ((num_notes * skip + degree) // get_scale_length(scale)) + 1
+    if isinstance(scale, str):
+        scale_length = get_scale_length(scale)
+    else:
+        scale_length = len(scale)
+
+    num_of_octaves = ((num_notes * skip + degree) // scale_length) + 1
     scale_notes = get_scale_notes(scale, root, num_of_octaves)
     return scale_notes[degree - 1 :: skip][:num_notes]
 
 
-def get_scale_length(name: str) -> int:
+def get_scale_length(scale: str) -> int:
     """Get length of the scale
 
     Args:
@@ -130,8 +144,10 @@ def get_scale_length(name: str) -> int:
     Returns:
         int: Length of the scale
     """
-    scale = SCALES.get(name.lower().capitalize(), SCALES["Ionian"])
-    return len(scale)
+    if isinstance(scale, (list, tuple)):
+        return len(scale)
+
+    return len(SCALES.get(scale.lower().capitalize(), SCALES["Ionian"]))
 
 
 # pylint: disable=locally-disabled, too-many-arguments
@@ -271,9 +287,9 @@ def midi_to_pitch_class(note: int, key: str | int, scale: str) -> dict:
     Returns:
         tuple: Returns dict containing pitch-class values
     """
-    pitch_class = note % 12
+    pitch_class = int(note % 12)  # Cast to int "fixes" microtonal scales
     octave = midi_to_octave(note) - 5
-    if scale.upper() == "CHROMATIC":
+    if isinstance(scale, str) and scale.upper() == "CHROMATIC":
         return {"text": str(pitch_class), "pitch_class": pitch_class, "octave": octave}
 
     sharps = ["0", "#0", "1", "#1", "2", "3", "#3", "4", "#4", "5", "#5", "6"]
@@ -319,7 +335,11 @@ def chord_from_degree(
     """
     root = note_name_to_midi(root) if isinstance(root, str) else root
 
-    if name is None and scale.lower().capitalize() == "Chromatic":
+    if (
+        name is None
+        and isinstance(scale, str)
+        and scale.lower().capitalize() == "Chromatic"
+    ):
         name = "major"
 
     if name:
@@ -387,6 +407,32 @@ def cents_to_semitones(cents: list) -> tuple[float]:
         semitone_scale.append(semitone_interval)
     return tuple(semitone_scale)
 
+
 def ratio_to_cents(ratio: float) -> float:
     """Transform ratio to cents"""
-    return 1200.0 * log(float(ratio), 2)
+    return 1200.0 * log2(float(ratio))
+
+
+def monzo_to_cents(monzo) -> float:
+    """
+    Convert a monzo to cents using the prime factorization method.
+
+    Args:
+        monzo (list): A list of integers representing the exponents of the prime factorization
+
+    Returns:
+        float: The value in cents
+    """
+    # Calculate the prime factors of the indices in the monzo
+    max_index = len(monzo)
+    primes = list(islice(gen_primes(), max_index + 1))
+
+    # Product of the prime factors raised to the corresponding exponents
+    ratio = 1
+    for i in range(max_index):
+        ratio *= primes[i] ** monzo[i]
+
+    # Frequency ratio to cents
+    cents = 1200 * log2(ratio)
+
+    return cents
