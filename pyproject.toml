@@ -32,7 +32,7 @@ documentation = "https://github.com/Bubobubobubobubo/ziffers-python"
 repository = "https://github.com/Bubobubobubobubo/ziffers-python"
 
 [tool.setuptools]
-py-modules = ['ziffers']
+packages = ['ziffers']
 
 [tool.black]
 target_version = ['py311']
