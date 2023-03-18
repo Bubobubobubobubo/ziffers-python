@@ -6,3 +6,4 @@ from .scale import *
 from .converters import *
 from .spec import *
 from .classes import *
+from .generators import *

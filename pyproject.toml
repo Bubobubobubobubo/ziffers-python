@@ -1,5 +1,5 @@
 [project]
-name = "python-ziffers"
+name = "ziffers"
 version = "0.1.0"
 description = "Port of the Ziffers numerical notation for Python"
 authors = [
