@@ -62,7 +62,9 @@ OPERATORS = MappingProxyType({
     ">>": operator.irshift,
     "@": "vertical",
     "#": "horizontal",
-    "<>": "zip"
+    "<>": "zip",
+    "?": "pick",
+    "~": "select"
 })
 
 

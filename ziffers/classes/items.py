@@ -433,7 +433,7 @@ class RomanNumeral(Event):
     pitch_classes: list = field(default=None, init=False)
     inversions: int = field(default=None)
     evaluated_chord: Chord = None
-
+    
     def set_notes(self, chord_notes: list[int]):
         """Set notes to roman numeral
 

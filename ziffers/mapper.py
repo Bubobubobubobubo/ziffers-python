@@ -431,7 +431,7 @@ class ZiffersTransformer(Transformer):
     def lisp_operation(self, items):
         """Parse lisp like list operation"""
         op = items[0]
-        values = items[1:]
+        values = items[2]
         return LispOperation(
             operator=op,
             values=values,

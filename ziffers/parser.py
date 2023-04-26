@@ -73,7 +73,6 @@ def zparse(expr: str, **opts) -> Ziffers:
     parsed.init_opts(opts)
     return parsed
 
-
 # pylint: disable=invalid-name
 
 
