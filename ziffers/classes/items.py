@@ -198,6 +198,7 @@ class Pitch(Event):
     key: str = field(default=None)
     scale: str | list = field(default=None)
     freq: float = field(default=None)
+    degrees: bool = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -246,6 +247,7 @@ class Pitch(Event):
                 intervals=self.scale,
                 modifier=self.modifier if self.modifier is not None else 0,
                 octave=self.octave if self.octave is not None else 0,
+                degrees=self.degrees
             )
             self.pitch_bend = pitch_bend
             self.freq = midi_to_freq(note)
@@ -598,6 +600,8 @@ class Cyclic(Item):
         """Get the value for the current cycle"""
         value = self.values[self.cycle % len(self.values)]
         self.cycle += 1
+        if options:
+            value.update_options(options)
         return value
 
 

@@ -124,6 +124,8 @@ def resolve_item(item: Meta, options: dict):
         update_modifications(item, options)
     elif isinstance(item, Measure):
         item.reset_options(options)
+    elif options["degrees"] is True and isinstance(item, Pitch) and item.pitch_class is 0:
+        yield Rest(text="r", kwargs=options)
     elif isinstance(item, Meta):  # Filters whitespace
         yield update_item(item, options)
 
@@ -208,6 +210,7 @@ def create_pitch(current: Item, options: dict) -> Pitch:
         intervals=merged_options["scale"],
         modifier=c_modifier,
         octave=c_octave,
+        degrees=merged_options["degrees"]
     )
     new_pitch = Pitch(
         pitch_class=current_value,
@@ -382,7 +385,7 @@ class ListOperation(Sequence):
                     else:
                         flattened_list.append(_filter_operation(item, options))
                 elif isinstance(item, Cyclic):
-                    value = item.get_value()
+                    value = item.get_value(options)
                     if isinstance(value, Sequence):
                         flattened_list.extend(_filter_operation(value, options))
                     elif isinstance(value, (Event, RandomInteger, Integer)):

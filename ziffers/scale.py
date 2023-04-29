@@ -149,7 +149,6 @@ def get_scale_length(scale: str) -> int:
 
     return len(SCALES.get(scale.lower().capitalize(), SCALES["Ionian"]))
 
-
 # pylint: disable=locally-disabled, too-many-arguments
 def note_from_pc(
     root: int | str,
@@ -157,6 +156,7 @@ def note_from_pc(
     intervals: str | tuple[int | float],
     octave: int = 0,
     modifier: int = 0,
+    degrees: bool = False
 ) -> int:
     """Resolve a pitch class into a note from a scale
 
@@ -173,6 +173,7 @@ def note_from_pc(
     """
 
     # Initialization
+    pitch_class = pitch_class-1 if degrees and pitch_class>0 else pitch_class
     root = note_name_to_midi(root) if isinstance(root, str) else root
     intervals = get_scale(intervals) if isinstance(intervals, str) else intervals
     scale_length = len(intervals)

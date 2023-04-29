@@ -16,7 +16,8 @@ def test_can_parse():
         "q 2 <3 343>",
         "q (2 <3 343 (3 4)>)",
         "? 1 2",
-        "(? 2 ? 4)+(1,4)"
+        "(? 2 ? 4)+(1,4)",
+        "(1 2 <2 3>)+(0 1 2)"
     ]
     results = []
     for expression in expressions:
@@ -42,7 +43,6 @@ def test_can_parse():
 )
 def test_parsing_text(pattern: str):
     assert zparse(pattern).text == pattern
-
 
 @pytest.mark.parametrize(
     "pattern,expected",
@@ -158,6 +158,15 @@ def test_rest(pattern: str, expected: list):
 )
 def test_ranges(pattern: str, expected: list):
     assert get_items(zparse(pattern),len(expected)*2,"note") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+      ("0 1 2 3", [None, 60, 62, 64])
+    ]
+)
+def test_degree_notation(pattern: str, expected: list):
+    assert get_items(zparse(pattern, degrees=True),len(expected)*2,"note") == expected*2
 
 @pytest.mark.parametrize(
     "pattern,expected",
