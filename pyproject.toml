@@ -1,6 +1,6 @@
 [project]
 name = "ziffers"
-version = "0.1.0"
+version = "0.0.1"
 description = "Port of the Ziffers numerical notation for Python"
 authors = [
     {name = "Raphaël Forment", email="raphael.forment@gmail.com"},
@@ -13,7 +13,10 @@ requires-python = ">=3.10"
 keywords = ["mininotation", "algorithmic music", "parser"]
 
 classifiers = [
-    "Topic :: Software Development"
+    "Topic :: Artistic Software",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 
 dependencies = [
@@ -32,7 +35,7 @@ documentation = "https://github.com/Bubobubobubobubo/ziffers-python"
 repository = "https://github.com/Bubobubobubobubo/ziffers-python"
 
 [tool.setuptools]
-packages = ['ziffers']
+packages = ['ziffers','ziffers.classes','ziffers.spec']
 
 [tool.black]
 target_version = ['py311']
