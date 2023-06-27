@@ -153,9 +153,17 @@ class Ziffers(Sequence):
     def pairs(self) -> list[tuple]:
         """Return list of pitches and durations"""
         return [
-            (val.get_pitch_class(), val.get_duration())
+            [val.get_pitch_class(), val.get_duration()]
             for val in self.evaluated_values
-            if isinstance(val, Pitch)
+            if isinstance(val, Pitch) or isinstance(val, Chord) or isinstance(val, Rest)
+        ]
+    
+    def freq_pairs(self) -> list[tuple]:
+        """Return list of pitches in freq and durations"""
+        return [
+            [val.get_freq(), val.get_duration()]
+            for val in self.evaluated_values
+            if isinstance(val, Pitch) or isinstance(val, Chord) or isinstance(val, Rest)
         ]
 
     def octaves(self) -> list[int]:
