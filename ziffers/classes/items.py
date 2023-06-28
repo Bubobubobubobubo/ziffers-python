@@ -224,6 +224,10 @@ class Pitch(Event):
     def get_octave(self):
         """Getter for octave"""
         return self.octave
+    
+    def get_beat(self):
+        """Getter for beat"""
+        return self.beat
 
     def get_pitch_class(self):
         """Getter for pitche"""

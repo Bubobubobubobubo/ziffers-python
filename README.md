@@ -8,6 +8,8 @@ Ziffers python supports following live coding and computer-aided composition env
 
 * [Sardine](https://github.com/Bubobubobubobubo/sardine)
 * [Music21](https://github.com/cuthbertLab/music21)
+* [Csound](http://www.csounds.com/manual/html/ScoreTop.html)
+* [Sonicsynth](https://github.com/Frikallo/SonicSynth)
 
 # Status:
 

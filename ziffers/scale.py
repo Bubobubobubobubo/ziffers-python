@@ -231,7 +231,10 @@ def accidentals_from_note_name(name: str) -> int:
     Returns:
         int: Integer representing number of flats or sharps: -7 flat to 7 sharp.
     """
-    idx = CIRCLE_OF_FIFTHS.index(name.upper())
+    if name not in CIRCLE_OF_FIFTHS:
+        name = midi_to_note_name(note_name_to_midi(name))
+
+    idx = CIRCLE_OF_FIFTHS.index(name)
     return idx - 6
 
 

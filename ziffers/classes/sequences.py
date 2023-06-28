@@ -555,6 +555,8 @@ class ListOperation(Sequence):
                     outcome = __chord_operation(first, second, False, options)
                 elif isinstance(second, Chord):
                     outcome = __chord_operation(second, first, True, options)
+                elif isinstance(first, Rest) or isinstance(second, Rest):
+                    outcome = Rest(duration=first.get_duration())
                 else:
                     outcome = Pitch(
                         pitch_class=operation(

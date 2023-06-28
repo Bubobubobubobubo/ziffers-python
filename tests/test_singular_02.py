@@ -191,6 +191,16 @@ def test_romans_pcs(pattern: str, expected: list):
 @pytest.mark.parametrize(
     "pattern,expected",
     [
+      ("(0 1 2 3 r)+(1)", [1,2,3,4,None]),
+      ("(0 1 2 3 r)-(0 1 4)", [0, -1, -2, -3, None, 1, 0, -1, -2, None, 4, 3, 2, 1, None])
+    ]
+)
+def test_operations(pattern: str, expected: list):
+    assert get_items(zparse(pattern),len(expected)*2,"pitch_class") == expected*2
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
      ("(i)+<0 1 2>", [[60, 64, 67], [62, 65, 69], [64, 67, 71], [60, 64, 67]]),
      ("(i)+<0 <1 2>>",[[60, 64, 67], [62, 65, 69], [60, 64, 67], [64, 67, 71]])
     ]
