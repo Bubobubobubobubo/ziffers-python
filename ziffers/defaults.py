@@ -3,41 +3,50 @@ import operator
 from types import MappingProxyType
 
 DEFAULT_DURS = MappingProxyType({
-    "m": 8.0,  # 15360/1920
-    "k": 10240 / 1920,  # ~5.333
-    "l": 4.0,  # 7680/1920
-    "d.": 3.0,  #
-    "p": 5120 / 1920,  # ~2.666
-    "d": 2.0,  # 3840/1920
-    "w.": 1.5,  # 2280/1920
-    "c": 2560 / 1920,  # ~1.333
-    "w": 1.0,  # 1920/1920
-    "h..": 0.875,  # 1680/1920
-    "h.": 0.75,  # 1440/1920
-    "y": 1280 / 1920,  # ~0.666
-    "h": 0.5,  # 960/1920 - 1/2
-    "q..": 840 / 1920,  # ~0.4375
-    "q.": 0.375,  # 720/1920
-    "n": 640 / 1920,  # ~0.333
-    "q": 0.25,  # 480/1920 - 1/4
-    "e..": 420 / 1920,  # = 0.218
-    "e.": 0.1875,  # 360/1920
-    "a": 320 / 1920,  # 0.167 - 1/8
-    "e": 0.125,  # 240/1920
-    "s..": 210 / 1920,  # ~0.10937
-    "s.": 180 / 1920,  # ~0.0937
-    "f": 160 / 1920,  # ~0.083 - 1/16
-    "s": 0.0625,  # 120/1920
-    "t..": 105 / 1920,  # ~0.0546
-    "t.": 90 / 1920,  # ~0.0468
-    "x": 80 / 1920,  # ~0.042 - 1/32
-    "t": 60 / 1920,  # ~0.031
-    "u.": 45 / 1920,  # ~0.023
-    "g": 40 / 1920,  # ~0.021 - 1/64
-    "u": 30 / 1920,  # ~0.016
-    "j": 15 / 1920,  # ~0.0078 - 1/128
-    "o": 8 / 1920,  # ~0.00416
-    "z": 0.0,  # 0
+    "m..": 14.0,   # Double dotted maxima
+    "m.": 12.0,    # Dotted maxima
+    "m": 8.0,      # Maxima
+    "l..": 7.0,    # Double dotted long
+    "l.": 6.0,     # Dotted long
+    "l": 4.0,      # Long
+    "d..": 7/2,    # 3.5: Double dotted double whole
+    "d.": 3.0,     # Dotted double whole
+    "n": 8/3,      # 2.666: Triplet long
+    "d": 2.0,      # Double whole
+    "w..": 7/4,    # 1.75: Double dotted whole
+    "w.": 3/2,     # 1.5: Double dotted whole
+    "k": 4/3,      # 1.333: Triplet double whole
+    "w": 1.0,      # Whole
+    "h..": 7/8,    # 0.875: Double dotted half
+    "h.": 3/4,     # 0.75: Dotted half
+    "c": 2/3,      # 0.666: Triplet whole
+    "h": 1/2,      # 0.5: Half
+    "p": 1/3,      # 0.333: Triplet half
+    "q..": 7/16,   # 0.4375: Double dotted quarter
+    "q.": 3/8,     # 0.375: Dotted quarter
+    "q": 0.25,     # Quarter
+    "e..": 7/32,   # 0.2187: Double dotted eighth
+    "e.": 3/16,    # 0.1875: Dotted eighth
+    "g": 1/6,      # 0.1666: Triplet quarter
+    "e": 1/8,      # 0.125: 8th note
+    "s..": 7/64,   # 0.1093: Double dotted 16th
+    "a": 1/12,     # 0.0833: Triplet 8th
+    "s.": 3/32,    # 0.0937: Dotted 16th
+    "s": 1/16,     # 0.0625: 16th note
+    "t..": 7/128,  # 0.0546: Double dotted 32th
+    "t.": 3/64,    # 0.0468: Dotted 32th
+    "f": 1/24,     # 0.0416: Triplet 16th
+    "t": 1/32,     # 0.0312: 32th note
+    "u..": 7/256,  # 0.0273: Double dotted 64th
+    "u.": 3/128,   # 0.0234: Dotted 64th
+    "x": 1/48,     # 0.0208: Triplet 32th
+    "u": 1/64,     # 0.0156: 64th note
+    "o..": 7/512,  # 0.0136: Double dotted 128th
+    "y": 1/96,     # 0.0104: Triplet 64th
+    "o.": 3/256,   # 0.0117: Dotted 128th
+    "o": 1/128,    # 0.0078: 128th note
+    "j": 1/192,    # 0.0052: Triplet 128th
+    "z": 0.0,      # 0
 })
 
 DEFAULT_OCTAVE = 4
@@ -114,6 +123,30 @@ CIRCLE_OF_FIFTHS = (
     "B",
     "Fs",
 )
+
+MODES = (
+    "MAJOR",
+    "IONIAN",
+    "MINOR",
+    "AEOLIAN",
+    "DORIAN",
+    "PHRYGIAN",
+    "LYDIAN",
+    "MIXOLYDIAN",
+    "LOCRIAN",
+)
+
+MODE_ACCIDENTALS = MappingProxyType({
+    "MAJOR": 0,
+    "IONIAN": 0,
+    "MINOR": -3,
+    "AEOLIAN": -3,
+    "DORIAN": -2,
+    "PHRYGIAN": -4,
+    "LYDIAN": 1,
+    "MIXOLYDIAN": -1,
+    "LOCRIAN": -5,
+})
 
 MODIFIERS = MappingProxyType({
     "#": 1,

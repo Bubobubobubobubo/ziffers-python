@@ -539,7 +539,7 @@ class ScalaTransformer(Transformer):
         """Get EDO ratio"""
         ratio = pow(2, items[0] / items[1])
         return ratio_to_cents(ratio)
-
+        
     def edji_ratio(self, items):
         """Get EDJI ratio"""
         if len(items) > 3:

@@ -149,6 +149,7 @@ def get_scale_length(scale: str) -> int:
 
     return len(SCALES.get(scale.lower().capitalize(), SCALES["Ionian"]))
 
+
 # pylint: disable=locally-disabled, too-many-arguments
 def note_from_pc(
     root: int | str,

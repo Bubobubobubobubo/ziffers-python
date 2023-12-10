@@ -124,7 +124,7 @@ def resolve_item(item: Meta, options: dict):
         update_modifications(item, options)
     elif isinstance(item, Measure):
         item.reset_options(options)
-    elif options["degrees"] is True and isinstance(item, Pitch) and item.pitch_class is 0:
+    elif options["degrees"] is True and isinstance(item, Pitch) and item.pitch_class == 0:
         yield Rest(text="r", kwargs=options)
     elif isinstance(item, Meta):  # Filters whitespace
         yield update_item(item, options)

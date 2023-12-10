@@ -1,5 +1,5 @@
 """Collection of converters"""
-from ziffers import zparse, Ziffers, Pitch, Rest, Chord, accidentals_from_note_name
+from ziffers import zparse, Ziffers, Pitch, Rest, Chord, accidentals_from_note_name, MODES, MODE_ACCIDENTALS
 
 try:
     from music21 import converter, note, stream, meter, chord, environment, tempo, key
@@ -102,8 +102,16 @@ if music21_imported:
 
             if "key" in options:
                 accidentals = accidentals_from_note_name(options["key"])
-                if "scale" in options and options["scale"].upper() == "MINOR":
-                    accidentals-=3 # If minor, subtract 3 from accidentals
+            else:
+                accidentals = 0
+
+            if "scale" in options:
+                scale_upper = options["scale"].upper()
+                scale_lower = options["scale"].lower()
+                if scale_upper in MODES:
+                    accidentals += MODE_ACCIDENTALS[scale_upper]
+                    note_stream.append(key.KeySignature(accidentals,mode=scale_lower))
+            else:
                 note_stream.append(key.KeySignature(accidentals))
 
             if "bpm" in options:
